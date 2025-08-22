@@ -1,0 +1,45 @@
+############################
+Device: Nanostim, volume: 1183.57 mm³
+Original length: 42, original diameter: 5.99
+New length: 20 mm, new diameter: 8.68 mm
+New length: 25 mm, new diameter: 7.76 mm
+New length: 30 mm, new diameter: 7.09 mm
+New length: 35 mm, new diameter: 6.56 mm
+New length: 40 mm, new diameter: 6.14 mm
+New length: 45 mm, new diameter: 5.79 mm
+############################
+Device: Micra, volume: 913.14 mm³
+Original length: 25.9, original diameter: 6.7
+New length: 20 mm, new diameter: 7.62 mm
+New length: 25 mm, new diameter: 6.82 mm
+New length: 30 mm, new diameter: 6.23 mm
+New length: 35 mm, new diameter: 5.76 mm
+New length: 40 mm, new diameter: 5.39 mm
+New length: 45 mm, new diameter: 5.08 mm
+############################
+Device: Avier, volume: 1237.78 mm³
+Original length: 38, original diameter: 6.44
+New length: 20 mm, new diameter: 8.88 mm
+New length: 25 mm, new diameter: 7.94 mm
+New length: 30 mm, new diameter: 7.25 mm
+New length: 35 mm, new diameter: 6.71 mm
+New length: 40 mm, new diameter: 6.28 mm
+New length: 45 mm, new diameter: 5.92 mm
+############################
+Device: Avier_aldo, volume: 1007.04 mm³
+Original length: 32, original diameter: 6.33
+New length: 20 mm, new diameter: 8.01 mm
+New length: 25 mm, new diameter: 7.16 mm
+New length: 30 mm, new diameter: 6.54 mm
+New length: 35 mm, new diameter: 6.05 mm
+New length: 40 mm, new diameter: 5.66 mm
+New length: 45 mm, new diameter: 5.34 mm
+############################
+Device: Avier_aldo10, volume: 1321.74 mm³
+Original length: 42, original diameter: 6.33
+New length: 20 mm, new diameter: 9.17 mm
+New length: 25 mm, new diameter: 8.20 mm
+New length: 30 mm, new diameter: 7.49 mm
+New length: 35 mm, new diameter: 6.93 mm
+New length: 40 mm, new diameter: 6.49 mm
+New length: 45 mm, new diameter: 6.12 mm
