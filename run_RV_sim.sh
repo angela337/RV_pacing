@@ -26,8 +26,8 @@ getCollision=false
 #############################
 #make_cone=true
 #flip_mesh=true
-#motion_tracking=true
-getCollision=true
+motion_tracking=true
+#getCollision=true
 #############################
 
 # Home paths
@@ -35,6 +35,7 @@ MSHF_path=/data_fast/Work/MS_HF_cohort/
 python_path=/data_slow/Dropbox/Work/Atria/code/python/vtk_extras
 meshtool=/home/alee9/Work/software/meshtool/meshtool 
 transform_points=/home/alee9/Work/software/CemrgApp-Linux_v2.3-rc4/bin/MLib/transform-points
+transform_image=/home/alee9/Work/software/CemrgApp-Linux_v2.3-rc4/bin/MLib/transform-image
 
 # 392 paths
 #MSHF_path=/data5/alee9/MS_HF_cohort/
@@ -47,12 +48,12 @@ do
     segPath=${MSHF_path}/data/$casenum/1_seg/
 #    segPath=/data5/alee9/MS_HF_cohort/$casenum/RV/
     trackingPath=${MSHF_path}/data/${casenum}/2_motion/
-
+    maskfile=${segPath}/all_labels_mask.nii
     if $gradientEdgeDetect; then 
         echo "# Make masked image and get the gradient edge image "
 
         dcmfile=${segPath}/dcm-0.nii
-        maskfile=${segPath}/all_labels_mask.nii
+        
         outfile=${segPath}/dcm-masked_gradient.nii
         python ${MSHF_path}/code/process_RV_gradient.py ${dcmfile} ${maskfile} ${outfile} --target_labels [4,5,22,24]
     fi 
@@ -222,8 +223,8 @@ do
         PMinit_mesh=${MSHF_path}/data/${casenum}/2_motion/PM_flip.vtk
         TVinit_mesh=${MSHF_path}/data/${casenum}/2_motion/TV_flip.vtk
         tsffd=${trackingPath}/tsffd.dof
-            
-        for (( frame = 0; frame<=10; frame++))
+        #for frame in 0 4    
+        for (( frame = 1; frame<=10; frame++))
         do    
             echo $frame                                    
             frame10=$((frame*10))
@@ -235,8 +236,11 @@ do
             # PM
             #${transform_points}  ${PMinit_mesh} ${trackingPath}/tracked/PM-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3 
             # TV 
-            ${transform_points}  ${TVinit_mesh} ${trackingPath}/tracked/TV-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3
+            #${transform_points}  ${TVinit_mesh} ${trackingPath}/tracked/TV-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3
             #${transform_points}  ${trackingPath}/TV_surfmesh_flip.vtk ${trackingPath}/tracked/TV_ring-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3
+            # transform image 
+            ${transform_image} ${maskfile} ${trackingPath}/tracked/mask-${frame}.nii -dofin ${tsffd} -St ${frame10} -Tt ${startTime}
+
         done  
     fi 
     
@@ -271,13 +275,13 @@ do
     mkdir -p ${trackingPath}/T-PM/ # Simulate transvenous PM 
 
     if $getCollision; then 
-        for device in Micra #AveirAR AveirVR #  "Micra": {"D": 6.7, "L": 25.9}, # AV/AV2 Micra #AveirAR # AveirVR 
+        for device in Micra # AveirAR AveirVR # AveirAR # "Micra": {"D": 6.7, "L": 25.9}, # AV/AV2 Micra #AveirAR # AveirVR 
         do 
             mkdir -p ${trackingPath}/$device/
             mkdir -p ${trackingPath}/T-PM/$device/
         
             if [[ $device == "Micra" ]]; then 
-                init_len=25.9
+                init_len=25.9 
             elif [[ $device == "AveirAR" ]]; then 
                 init_len=32.2
             elif [[ $device == "AveirVR" ]]; then 
@@ -286,7 +290,7 @@ do
                 init_len=30
             fi
 
-            for new_length in 15 20 25 30 35 40 45 
+            for new_length in $init_len # 15 20 25 30 35 40 45 
             do
                 mkdir -p ${trackingPath}/$device/L${new_length}
                 # For the L-PM simulations
