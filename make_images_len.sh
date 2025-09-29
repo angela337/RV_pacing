@@ -1,4 +1,4 @@
-Fig1E=true
+Fig1E=false
 if $Fig1E; then 
     imgdir=/data_fast/Work/MS_HF_cohort/images/
     
@@ -56,10 +56,10 @@ if $Fig2; then
 			 TV_Collision/sum_plots/${pngfile} \
 			 PM_Collision/sum_plots/${pngfile} \
 			 $outfile2 \
-			 +smush -50 \) -resize 50% Fig2.png
+			 +smush -50 \) -resize 50% /data_fast/Work/MS_HF_cohort/images/fig2.png
 	done
 	rm temp*.png
-	echo "/data_fast/Work/MS_HF_cohort/images/${device}/Fig2.png"
+	echo "/data_fast/Work/MS_HF_cohort/images/fig2.png"
 
 fi 
 
@@ -81,7 +81,7 @@ fi
 
 ######################################################################
 # Combine all lengths # CSP Fig 4
-Fig4=false # Length AHA wedge maps 
+Fig4=false # Length AHA wedge maps - dont use this! 
 if $Fig4; then 
 	collision_field='RV_Collision' # Combined_Collision=''
 	shift=250
@@ -152,7 +152,7 @@ if $Fig4; then
 fi
 #####################################################################
 
-Fig4_2rows=false
+Fig4_2rows=true
 if $Fig4_2rows; then  # USE THIS
     shift=250
 
@@ -184,8 +184,8 @@ if $Fig4_2rows; then  # USE THIS
             -background white temp_combined.png
 
         # Resize and save final result
-        convert temp_combined.png -resize 30% "${devicePath}/${device}_all_lengths.png"
-        echo "${devicePath}/${device}_all_lengths.png"
+        convert temp_combined.png -resize 50% /data_fast/Work/MS_HF_cohort/images/fig4.png
+        echo "eog /data_fast/Work/MS_HF_cohort/images/fig4.png"
 
         # Clean up
         rm -f temp_row1.png temp_row2.png temp_combined.png
@@ -290,7 +290,7 @@ if $Fig5c; then # USE THIS ONE
 	rm ${imgdir}/RV_TV_combined.png ${imgdir}/PM_Combined_stacked.png
 	rm temp*.png /data_fast/Work/MS_HF_cohort/images/plots/legend_only_padded.png /data_fast/Work/MS_HF_cohort/images/plots/background_padded.png
 	rm /data_fast/Work/MS_HF_cohort/images/plots/combined_legend_top.png
-	
+	rm /data_fast/Work/MS_HF_cohort/images/LBBAP_outline*.png
 fi
 #################################################################################
 # Graphical abstract
