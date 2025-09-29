@@ -1,4 +1,14 @@
-Fig2=true
+Fig1E=true
+if $Fig1E; then 
+    imgdir=/data_fast/Work/MS_HF_cohort/images/
+    
+    
+	convert +append ${imgdir}/AveirAR/sum_plots/Overlay_110_AveirAR_L15_full_AHA.png ${imgdir}/plots/legend_only.png -background white -gravity center ${imgdir}/fig1e.png
+	echo "${imgdir}/fig1e.png"
+	eog ${imgdir}/fig1e.png
+fi 
+
+Fig2=false
 #######################################################################
 if $Fig2; then 
 # Figure 2: Summary plots for initial device dimensions
@@ -49,13 +59,30 @@ if $Fig2; then
 			 +smush -50 \) -resize 50% Fig2.png
 	done
 	rm temp*.png
-fi 
-echo "/data_fast/Work/MS_HF_cohort/images/${device}/Fig2.png"
+	echo "/data_fast/Work/MS_HF_cohort/images/${device}/Fig2.png"
 
-######################################################################
-# Combine all lengths # CSP Fig 3
+fi 
+
+#####################################################################
 Fig3=false
 if $Fig3; then 
+	images=()
+	imgdir=/data_fast/Work/MS_HF_cohort/images/plots/
+	#/data_fast/Work/MS_HF_cohort/images/plots/PM_Collision_by_AHA_region.png
+	for coll in "RV" "TV" "PM" "Combined"
+	do 
+		images+=(${imgdir}/${coll}_Collision_by_AHA_region.png)
+	done
+	#echo "${images[1]}"
+	convert -append ${images[0]} ${images[1]} ${images[2]} ${images[3]} /data_fast/Work/MS_HF_cohort/images/fig3.png
+	echo "/data_fast/Work/MS_HF_cohort/images/fig3.png"
+	eog /data_fast/Work/MS_HF_cohort/images/fig3.png
+fi
+
+######################################################################
+# Combine all lengths # CSP Fig 4
+Fig4=false # Length AHA wedge maps 
+if $Fig4; then 
 	collision_field='RV_Collision' # Combined_Collision=''
 	shift=250
 	lshift=200
@@ -121,12 +148,12 @@ if $Fig3; then
 		rm -f temp_overlay_*.png 
 		
 	done
+	
 fi
+#####################################################################
 
-Fig3_2rows=false
-
-
-if $Fig3_2rows; then 
+Fig4_2rows=false
+if $Fig4_2rows; then  # USE THIS
     shift=250
 
     for device in "AveirAR" # "AveirAR" "AveirVR"
@@ -135,17 +162,22 @@ if $Fig3_2rows; then
 
         # Collect image paths
         images=()
-        for len in {15..45..5}; do
-            images+=("${devicePath}/sum_plots/Overlay_50_${device}_L${len}.png")
+        for len in 15 20 25 30 32.2 35 40 45; #{15..45..5}; do
+        do
+			filename=${devicePath}/sum_plots/Overlay_50_${device}_L${len}.png
+			convert $filename -crop 830x1409+180+0 ${devicePath}/sum_plots/temp_L${len}.png
+        
+            #images+=("${devicePath}/sum_plots/Overlay_50_${device}_L${len}.png")
+            images+=(${devicePath}/sum_plots/temp_L${len}.png)
         done
 
         # First row (4 images: 15–30 mm)
         montage "${images[0]}" "${images[1]}" "${images[2]}" "${images[3]}" \
             -tile 4x1 -geometry +2+2 temp_row1.png
 
-        # Second row (3 images: 35–45 mm)
-        montage "${images[4]}" "${images[5]}" "${images[6]}" \
-            -tile 3x1 -geometry +2+2 temp_row2.png
+        # Second row (4 images: 35–45 mm)
+        montage "${images[4]}" "${images[5]}" "${images[6]}" "${images[7]}" \
+            -tile 4x1 -geometry +2+2 temp_row2.png
 
         # Stack the two rows vertically
         montage temp_row1.png temp_row2.png -tile 1x2 -geometry +2+2 \
@@ -159,4 +191,171 @@ if $Fig3_2rows; then
         rm -f temp_row1.png temp_row2.png temp_combined.png
     done
 fi
+##############################################################################
+# CSP pacing line plots for the 4 regions (LB, AB, PB, SB) against the length of the device for the 3 L-PMs
+Fig5=false # DO NOT USE THIS
+# Version 2 
+# CSP pacing - each plot is the L-PM per collision type and all 4 regions are plotted as lines on each plot
+Fig5b=false 
+Fig5c=false 
 
+if $Fig5; then
+	image1=/data_fast/Work/MS_HF_cohort/images/LBBAP_outline.png
+	image2=/data_fast/Work/MS_HF_cohort/images/plots/RV_Collision_by_LBBAP_region.png
+	imgdir=/data_fast/Work/MS_HF_cohort/images/plots/
+	convert +append $image1 $image2 ${imgdir}/LBBAP_RV.png
+	
+	image1=/data_fast/Work/MS_HF_cohort/images/LBBAP_outline_blank.png
+	for coll in "TV" "PM" "Combined"
+	do 		
+		image2=/data_fast/Work/MS_HF_cohort/images/plots/${coll}_Collision_by_LBBAP_region.png
+		convert +append $image1 $image2 ${imgdir}/LBBAP_${coll}.png
+	done
+	
+	convert -append ${imgdir}/LBBAP_RV.png ${imgdir}/LBBAP_TV.png ${imgdir}/LBBAP_PM.png ${imgdir}/LBBAP_Combined.png /data_fast/Work/MS_HF_cohort/images/fig5.png
+	echo "/data_fast/Work/MS_HF_cohort/images/fig5.png"
+	#rm temp*.png
+	
+fi 
+if $Fig5b; then
+	append="regions_as_lines_LBBAP_regions" #  vs "by_LBBAP_region"
+	
+	convert /data_fast/Work/MS_HF_cohort/images/AveirAR//sum_plots/Overlay_110_AveirAR_L15.png -crop 900x1410+240+0 /data_fast/Work/MS_HF_cohort/images/LBBAP_outline.png
+	convert -size 900x1410 xc:white /data_fast/Work/MS_HF_cohort/images/LBBAP_outline_blank.png
+	
+	image1=/data_fast/Work/MS_HF_cohort/images/LBBAP_outline.png
+	image2=/data_fast/Work/MS_HF_cohort/images/plots/RV_Collision_${append}.png
+	imgdir=/data_fast/Work/MS_HF_cohort/images/plots/
+	convert +append $image1 $image2 ${imgdir}/LBBAP_RV.png
+	
+	image1=/data_fast/Work/MS_HF_cohort/images/LBBAP_outline_blank.png
+	for coll in "TV" "PM" "Combined"
+	do 		
+		image2=/data_fast/Work/MS_HF_cohort/images/plots/${coll}_Collision_${append}.png
+		convert +append $image1 $image2 ${imgdir}/LBBAP_${coll}.png
+	done
+	
+	convert -append ${imgdir}/LBBAP_RV.png ${imgdir}/LBBAP_TV.png ${imgdir}/LBBAP_PM.png ${imgdir}/LBBAP_Combined.png /data_fast/Work/MS_HF_cohort/images/fig5b.png
+	echo "/data_fast/Work/MS_HF_cohort/images/fig5b.png"
+	#rm temp*.png
+	
+fi 
+if $Fig5c; then # USE THIS ONE
+	append="regions_as_lines_LBBAP_regions" #  vs "by_LBBAP_region"
+	
+	convert /data_fast/Work/MS_HF_cohort/images/AveirAR//sum_plots/Overlay_110_AveirAR_L15.png -crop 900x1410+240+0 /data_fast/Work/MS_HF_cohort/images/LBBAP_outline.png
+	convert -size 900x1410 xc:white /data_fast/Work/MS_HF_cohort/images/LBBAP_outline_blank.png
+	
+	# Create 2-row versions (scaled to 1800x2820)
+	
+	#convert /data_fast/Work/MS_HF_cohort/images/LBBAP_outline.png -resize 1800x2820! /data_fast/Work/MS_HF_cohort/images/LBBAP_outline_2row.png
+	#convert -size 1800x2820 xc:white /data_fast/Work/MS_HF_cohort/images/LBBAP_outline_blank_2row.png
+	convert /data_fast/Work/MS_HF_cohort/images/LBBAP_outline.png -resize 1200x1880! /data_fast/Work/MS_HF_cohort/images/LBBAP_outline_2row.png
+	convert -size 1200x1880 xc:white /data_fast/Work/MS_HF_cohort/images/LBBAP_outline_blank_2row.png
+	# Find the maximum width
+	max_width=$(identify -format "%w\n" /data_fast/Work/MS_HF_cohort/images/plots/legend_only.png /data_fast/Work/MS_HF_cohort/images/LBBAP_outline_2row.png | sort -nr | head -1)
+
+	# Pad both images to the maximum width with white background
+	convert /data_fast/Work/MS_HF_cohort/images/plots/legend_only.png -background white -gravity center -extent ${max_width}x /data_fast/Work/MS_HF_cohort/images/plots/legend_only_padded.png
+	convert /data_fast/Work/MS_HF_cohort/images/LBBAP_outline_2row.png -background white -gravity center -extent ${max_width}x /data_fast/Work/MS_HF_cohort/images/plots/background_padded.png
+
+	# Append vertically (legend on top)
+	convert /data_fast/Work/MS_HF_cohort/images/plots/background_padded.png  /data_fast/Work/MS_HF_cohort/images/plots/legend_only_padded.png -append /data_fast/Work/MS_HF_cohort/images/plots/combined_legend_top.png
+	
+	#image1=/data_fast/Work/MS_HF_cohort/images/LBBAP_outline_2row.png
+	image1=/data_fast/Work/MS_HF_cohort/images/plots/combined_legend_top.png
+	image2=/data_fast/Work/MS_HF_cohort/images/plots/RV_Collision_${append}.png
+	image3=/data_fast/Work/MS_HF_cohort/images/plots/TV_Collision_${append}.png
+	imgdir=/data_fast/Work/MS_HF_cohort/images/plots/
+	
+	# Stack RV and TV plots vertically, then append to 2-row LBBAP outline
+	convert -append $image2 $image3 ${imgdir}/RV_TV_combined.png
+	convert +append $image1 ${imgdir}/RV_TV_combined.png ${imgdir}/LBBAP_RV_TV.png
+	
+	image1=/data_fast/Work/MS_HF_cohort/images/LBBAP_outline_blank_2row.png
+	#image1=/data_fast/Work/MS_HF_cohort/images/plots/combined_legend_top.png
+	image2=/data_fast/Work/MS_HF_cohort/images/plots/PM_Collision_${append}.png
+	image3=/data_fast/Work/MS_HF_cohort/images/plots/Combined_Collision_${append}.png
+	
+	# Stack PM and Combined plots vertically, then append to blank 2-row LBBAP outline
+	convert -append $image2 $image3 ${imgdir}/PM_Combined_stacked.png
+	convert +append $image1 ${imgdir}/PM_Combined_stacked.png ${imgdir}/LBBAP_PM_Combined.png
+	
+	# Final vertical combination
+	convert -append ${imgdir}/LBBAP_RV_TV.png ${imgdir}/LBBAP_PM_Combined.png /data_fast/Work/MS_HF_cohort/images/fig5c.png
+	echo "/data_fast/Work/MS_HF_cohort/images/fig5c.png"
+	eog /data_fast/Work/MS_HF_cohort/images/fig5c.png
+	
+	# Clean up temporary files
+	rm ${imgdir}/RV_TV_combined.png ${imgdir}/PM_Combined_stacked.png
+	rm temp*.png /data_fast/Work/MS_HF_cohort/images/plots/legend_only_padded.png /data_fast/Work/MS_HF_cohort/images/plots/background_padded.png
+	rm /data_fast/Work/MS_HF_cohort/images/plots/combined_legend_top.png
+	
+fi
+#################################################################################
+# Graphical abstract
+mainPath="/data_fast/Work/MS_HF_cohort/images/graph_abstract/"
+
+# Create array to store image paths
+images=()
+graphab=false
+if $graphab; then 
+	for i in RV TV PM
+	do 
+		for j in 2 #
+		do
+			images+=("${mainPath}/GraphAb_${i}${j}.png")
+		done
+	done
+	for ((i=0; i<${#images[@]}; i++)); do
+		convert ${images[i]} -fuzz 5% -trim +repage ${images[i]}
+	done
+fi
+graphab_cine=false	
+
+if $graphab_cine; then  
+    pushd /data_fast/Work/MS_HF_cohort/data/11/images/motion/cemrgoutput/
+    
+	#convert axial.png -trim axial.png
+#	  \( coronal.png -background black -gravity center -extent x$H \) \
+
+	
+    H=$(identify -format "%h\n" axial.png coronal.png sagittal.png | sort -nr | head -n1)
+	convert \
+	  \( axial.png -background black -gravity center -extent x$H \) \
+	  \( sagittal.png -background black -gravity center -extent x$H \) \
+	  +append multiplanar.png
+  
+	convert \( img0.png -trim \) \
+			\( img1.png -trim \) \
+			\( img2.png -trim \) \
+			\( img3.png -trim \) \
+			\( img4.png -trim \) \
+			\( img5.png -trim \) \
+			\( img6.png -trim \) \
+			\( img7.png -trim \) \
+			\( img8.png -trim \) \
+			\( img9.png -trim \) +append cine_stack.png
+
+	#convert \( img0.png -trim \) \
+			#\( cine_stack.png -resize $(identify -format "%w" img0.png)x \) -append final.png
+	#convert \( multiplanar.png -trim \) \
+#			\( cine_stack.png -resize $(identify -format "%w" multiplanar.png)x \) -append final.png
+
+	MP_W=$(identify -format "%w" multiplanar.png)
+
+	convert cine_stack.png -resize ${MP_W}x cine_stack_resized.png
+	convert -size ${MP_W}x10 xc:black black_band.png
+	convert -size ${MP_W}x50 xc:black black_band50.png	
+	convert multiplanar.png -trim \
+		black_band50.png \
+		cine_stack_resized.png \
+		black_band50.png \
+		black_band50.png \
+		black_band50.png \
+		-append final_cine.png
+		
+	 rm  cine_stack*.png multiplanar.png black_band*.png 
+	 eog final_cine.png
+	popd
+fi
