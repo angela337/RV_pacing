@@ -238,8 +238,8 @@ do
             # TV 
             #${transform_points}  ${TVinit_mesh} ${trackingPath}/tracked/TV-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3
             #${transform_points}  ${trackingPath}/TV_surfmesh_flip.vtk ${trackingPath}/tracked/TV_ring-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3
-            # transform image 
-            ${transform_image} ${maskfile} ${trackingPath}/tracked/mask-${frame}.nii -dofin ${tsffd} -St ${frame10} -Tt ${startTime}
+            # transform image for figure generation - use case11 - open in cemrgapp and then write out axial view
+            #${transform_image} ${maskfile} ${trackingPath}/tracked/mask-${frame}.nii -dofin ${tsffd} -St ${frame10} -Tt ${startTime}
 
         done  
     fi 
@@ -272,13 +272,13 @@ do
     #     done
     # fi
 
-    mkdir -p ${trackingPath}/T-PM/ # Simulate transvenous PM 
+    #mkdir -p ${trackingPath}/T-PM/ # Simulate transvenous PM 
 
     if $getCollision; then 
         for device in Micra # AveirAR AveirVR # AveirAR # "Micra": {"D": 6.7, "L": 25.9}, # AV/AV2 Micra #AveirAR # AveirVR 
         do 
             mkdir -p ${trackingPath}/$device/
-            mkdir -p ${trackingPath}/T-PM/$device/
+            # mkdir -p ${trackingPath}/T-PM/$device/
         
             if [[ $device == "Micra" ]]; then 
                 init_len=25.9 
