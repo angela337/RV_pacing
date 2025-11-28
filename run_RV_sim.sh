@@ -26,8 +26,8 @@ getCollision=false
 #############################
 #make_cone=true
 #flip_mesh=true
-motion_tracking=true
-#getCollision=true
+#motion_tracking=true
+getCollision=true
 #############################
 
 # Home paths
@@ -43,7 +43,8 @@ transform_image=/home/alee9/Work/software/CemrgApp-Linux_v2.3-rc4/bin/MLib/trans
 #meshtool=/home/carp_2024/CARPentry_ICL_latest/meshtool/meshtool
 #transform_points=/data5/alee9/software/CemrgApp-Linux_v2.3-rc4/bin/MLib/transform-points
 
-for casenum in 01 02 04 {06..11} 13 # 02 04 {05..11} 13 # No/bad data or fail at 3,5,12 01
+for casenum in 02 #10 08 #04 #{06..11} 13 # 02 04 {05..11} 13 # No/bad data or fail at 3,5,12 01
+#for casenum in 10 11 13 # 06 04 #02 01 # 13 11 10 # 09 08 07 #   06 07 08 09 #
 do 
     segPath=${MSHF_path}/data/$casenum/1_seg/
 #    segPath=/data5/alee9/MS_HF_cohort/$casenum/RV/
@@ -205,9 +206,6 @@ do
 
     #ls 
     if $motion_tracking; then 
-
-
-
         # python ${python_path}/flip_mesh.py ${segPath}/BiV_masked_PM.vtk ${MSHF_path}/data/${casenum}/2_motion/BiV_masked_flip.vtk
         # python ${python_path}/flip_mesh.py ${segPath}/RV_dec_filtered.vtk ${MSHF_path}/data/${casenum}/2_motion/RV_dec_flip.vtk
         # python ${python_path}/flip_mesh.py ${segPath}/RV_smooth.vtk ${MSHF_path}/data/${casenum}/2_motion/RV_smooth_flip.vtk
@@ -224,12 +222,12 @@ do
         TVinit_mesh=${MSHF_path}/data/${casenum}/2_motion/TV_flip.vtk
         tsffd=${trackingPath}/tsffd.dof
         #for frame in 0 4    
-        for (( frame = 1; frame<=10; frame++))
+        for (( frame = 0; frame<=10; frame++))
         do    
             echo $frame                                    
             frame10=$((frame*10))
             # Whole mesh
-            #${transform_points}  ${init_mesh} ${trackingPath}/tracked/transformed-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3 
+            ${transform_points}  ${init_mesh} ${trackingPath}/tracked/transformed-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3 
             # RV wall 
             #${transform_points}  ${RVinit_mesh} ${trackingPath}/tracked/RV_dec-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3 
             #${transform_points}  ${RVsmthinit_mesh} ${trackingPath}/tracked/RV_smth-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3 
@@ -275,7 +273,7 @@ do
     #mkdir -p ${trackingPath}/T-PM/ # Simulate transvenous PM 
 
     if $getCollision; then 
-        for device in Micra # AveirAR AveirVR # AveirAR # "Micra": {"D": 6.7, "L": 25.9}, # AV/AV2 Micra #AveirAR # AveirVR 
+        for device in Micra #AveirAR AveirVR # AveirAR # "Micra": {"D": 6.7, "L": 25.9}, # AV/AV2 Micra #AveirAR # AveirVR 
         do 
             mkdir -p ${trackingPath}/$device/
             # mkdir -p ${trackingPath}/T-PM/$device/
@@ -290,17 +288,39 @@ do
                 init_len=30
             fi
 
-            for new_length in $init_len # 15 20 25 30 35 40 45 
+            #for new_length in $init_len 15 20 25 30 35 40 45 # 45 40 35 30 25 20 15 #
+            for new_length in 30 #45 40 35 30 25 20 15 $init_len #
             do
-                mkdir -p ${trackingPath}/$device/L${new_length}
+                
+                #mkdir -p ${trackingPath}/$device/L${new_length}
                 # For the L-PM simulations
-                python ${python_path}/RV_collision.py -RV_files ${trackingPath}/tracked/RV_dec- -PM_files ${trackingPath}/tracked/PM- -TV_files ${trackingPath}/tracked/TV- -out_files ${trackingPath}/$device/L${new_length}/RV_collision- -device $device -L ${new_length} -v 
+                #python ${python_path}/RV_collision.py -RV_files ${trackingPath}/tracked/RV_dec- -PM_files ${trackingPath}/tracked/PM- -TV_files ${trackingPath}/tracked/TV- -out_files ${trackingPath}/$device/L${new_length}/RV_collision- -device $device -L ${new_length} -v 
 
                 # For the T-PM simulations
                 #mkdir -p ${trackingPath}/T-PM/$device/L${new_length}
                 #python ${python_path}/RV_collision.py -RV_files ${trackingPath}/tracked/RV_dec- -PM_files ${trackingPath}/tracked/PM- -TV_files ${trackingPath}/tracked/TV- -out_files ${trackingPath}/T-PM/$device/L${new_length}/RV_collision- -device $device -L ${new_length} -v #-TV_ring_files ${trackingPath}/tracked/TV_ring-
 
-                                
+                devicePath=${trackingPath}/${device}_cone10_10
+                mkdir -p ${devicePath}
+                mkdir -p ${devicePath}/L${new_length}
+                #if ! [ -f ${devicePath}/L${new_length}/RV_collision-all_times.csv ]; then
+                    python ${MSHF_path}/code/RV_collision.py -RV_files ${trackingPath}/tracked/RV_dec- -PM_files ${trackingPath}/tracked/PM-  -TV_files ${trackingPath}/tracked/TV- -out_files ${devicePath}/L${new_length}/RV_collision- -device $device -L ${new_length} -cone_angle 10 -num_cone_samples 10 --save_csv --verbose      
+                #else
+                #     echo "#############################################################"
+                #     echo "File ${devicePath}/L${new_length}/RV_collision-all_times.csv EXISTS! Skipping RV_collision.py calculation"
+                #     echo "#############################################################"
+                # fi
+                devicePath=${trackingPath}/${device}_cone5_10/
+                mkdir -p ${devicePath}
+                mkdir -p ${devicePath}/L${new_length}
+                if ! [ -f ${devicePath}/L${new_length}/RV_collision-all_times.csv ]; then
+                    python ${MSHF_path}/code/RV_collision.py -RV_files ${trackingPath}/tracked/RV_dec- -PM_files ${trackingPath}/tracked/PM-  -TV_files ${trackingPath}/tracked/TV- -out_files ${devicePath}/L${new_length}/RV_collision- -device $device -L ${new_length} -cone_angle 5 -num_cone_samples 10 --save_csv --verbose      
+                else
+                    echo "#############################################################"
+                    echo "File ${devicePath}/L${new_length}/RV_collision-all_times.csv EXISTS! Skipping RV_collision.py calculation"
+                    echo "#############################################################"
+                
+                fi 
             done
         done
     fi
@@ -310,10 +330,10 @@ done
 # AHA_mapping.ipynb 
 
 # To get the tables we can use the Process_AHA_csv_to_tables.ipynb notebook
-# Process_AHA_csv_to_tables.ipynb
+# Process_AHA_csv_to_plots_tables.ipynb
 
 # To run the statistical analysis and plot the results we can use the Analysis_compare_csv_output_from_AHA_mapping.ipynb notebook
-# Analysis_compare_csv_output_from_AHA_mapping.ipynb
+# Statistics_compare_csv_output_from_AHA_mapping.ipynb
 
 # To map AHA results onto the 3D mesh we can use the Map_3D_mesh.ipynb notebook
 # Map_3D_mesh.ipynb

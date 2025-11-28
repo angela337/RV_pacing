@@ -100,7 +100,7 @@ def check_collision_for_direction(strPos, direction, height, radius, RV, PM, TV,
     for ID in range(0, refRV.GetNumberOfPoints()):
         tstPoint = np.array(RV.GetPoint(ID))
         distance = np.sqrt(vtkMath.Distance2BetweenPoints(strPos, tstPoint))
-        if distance < (radius * 2 * 1.3):
+        if distance < (radius * 2): # If distance for the test point is too close to the attachment point - don't check these points 
             continue
         
         result = cylTest(strPos, endPos, tstPoint, pow(height, 2), pow(radius, 2))
@@ -126,7 +126,7 @@ def check_collision_for_direction(strPos, direction, height, radius, RV, PM, TV,
                 break
     
     return rv_collision, pm_collision, tv_collision
-
+'''
 def generateLocationMap(RV_files, PM_files, TV_files, out_files, radius=6.5/2, height=42, 
                        ntimes=10, cone_angle=0, num_cone_samples=10, save_csv=False, verbose=False):
     """
@@ -136,7 +136,8 @@ def generateLocationMap(RV_files, PM_files, TV_files, out_files, radius=6.5/2, h
     - cone_angle: half-angle of the cone in degrees (0 = no rotation)
     - num_cone_samples: number of directions to test within the cone
     """
-    
+    print(f'Cone angle: {cone_angle}')
+    print(f'Num cone samples: {num_cone_samples}')
     # Load reference meshes
     reader = vtkPolyDataReader()
     RV0_file = RV_files + "0.vtk"
@@ -240,16 +241,23 @@ def generateLocationMap(RV_files, PM_files, TV_files, out_files, radius=6.5/2, h
             
             # Generate cone directions
             directions = generate_cone_directions(normal, cone_angle, num_cone_samples)
+            if verbose: 
+                if ptID==0: 
+                    print(f'pt0 directions: {directions}')
             
             collision_free_found = False
             best_angle_for_point = -1
             
             # Test each direction in the cone
             for dir_idx, direction in enumerate(directions):
+                if verbose:
+                    if ptID==0:  
+                        print(f'Testing direction {dir_idx}: {direction}')
+
                 rv_col, pm_col, tv_col = check_collision_for_direction(
                     strPos, direction, height, radius, RV, PM, TV, refRV
                 )
-                
+
                 # Check if this direction is collision-free
                 any_collision = rv_col or pm_col or (tv_col if TV is not None else False)
                 
@@ -433,7 +441,366 @@ def generateLocationMap(RV_files, PM_files, TV_files, out_files, radius=6.5/2, h
             print(f"CSV summary saved to {csv_outname}")
             total_cf = np.sum(has_collision_free)
             print(f"\nSummary: {total_cf}/{num_points} points ({100*total_cf/num_points:.1f}%) have at least one collision-free orientation")
+'''
+def generateLocationMap(RV_files, PM_files, TV_files, out_files, radius=6.5/2, height=42, 
+                       ntimes=10, cone_angle=0, num_cone_samples=10, save_csv=False, verbose=False):
+    """
+    Modified to support cone rotation analysis with collision percentages.
+    
+    New parameters:
+    - cone_angle: half-angle of the cone in degrees (0 = no rotation)
+    - num_cone_samples: number of directions to test within the cone
+    """
+    print(f'Cone angle: {cone_angle}')
+    print(f'Num cone samples: {num_cone_samples}')
+    # Load reference meshes
+    reader = vtkPolyDataReader()
+    RV0_file = RV_files + "0.vtk"
+    reader.SetFileName(RV0_file)
+    reader.Update()
+    refRV = vtkPolyData()
+    refRV.ShallowCopy(reader.GetOutput())
+    
+    PM_reader = vtkPolyDataReader()
+    PM0_file = PM_files + "0.vtk"
+    PM_reader.SetFileName(PM0_file)
+    PM_reader.Update()
+    refPM = vtkPolyData()
+    refPM.ShallowCopy(PM_reader.GetOutput())
+    
+    if TV_files is not None:
+        TV_reader = vtkPolyDataReader()
+        TV0_file = TV_files + "0.vtk"
+        TV_reader.SetFileName(TV0_file)
+        TV_reader.Update()
+        refTV = vtkPolyData()
+        refTV.ShallowCopy(TV_reader.GetOutput())
 
+    # Initialize arrays
+    num_points = refRV.GetNumberOfPoints()
+    sumCollisions = np.zeros(num_points)
+    sumPMCollisions = np.zeros(num_points)
+    sumTVCollisions = np.zeros(num_points)
+    sumCombinedCollisions = np.zeros(num_points)
+    
+    # New arrays for cone collision tracking
+    sumRVConeCollisions = np.zeros(num_points)
+    sumPMConeCollisions = np.zeros(num_points)
+    sumTVConeCollisions = np.zeros(num_points)
+    sumCombinedConeCollisions = np.zeros(num_points)
+    
+    # CSV data collection
+    csv_data = []
+
+    # Loop through time frames
+    for j in range(0, ntimes):
+        collisionArray = np.zeros(num_points)
+        pmCollisionArray = np.zeros(num_points)
+        tvCollisionArray = np.zeros(num_points)
+        
+        # Cone collision assume collision and if there is no collision in any direction set to zero
+        rvConeCollision = np.ones(num_points)
+        pmConeCollision = np.ones(num_points)
+        tvConeCollision = np.ones(num_points)
+        combinedConeCollision = np.ones(num_points)
+        
+        # Load meshes at this time point
+        RVN_file = RV_files + str(j) + '.vtk'        
+        if not os.path.isfile(RVN_file):
+            print(f"Error: RV file {RVN_file} does not exist. Skipping frame {j}.")
+            continue
+        
+        if verbose: 
+            print(f"[{j+1}/{ntimes}] Loading RV: {RVN_file}")
+
+        reader = vtkPolyDataReader()
+        reader.SetFileName(RVN_file)
+        reader.Update()
+        RV = vtkPolyData().NewInstance()
+        RV.ShallowCopy(reader.GetOutput())
+        
+        PMN_file = PM_files + str(j) + '.vtk'
+        if not os.path.isfile(PMN_file):
+            print(f"Error: PM file {PMN_file} does not exist. Skipping frame {j}.")
+            continue
+        if verbose: 
+            print(f"[{j+1}/{ntimes}] Loading PM: {PMN_file}")
+        PM_reader = vtkPolyDataReader()
+        PM_reader.SetFileName(PMN_file)
+        PM_reader.Update()
+        PM = vtkPolyData().NewInstance()
+        PM.ShallowCopy(PM_reader.GetOutput())
+        
+        TV = None
+        if TV_files is not None:
+            TVN_file = TV_files + str(j) + '.vtk'
+            if not os.path.isfile(TVN_file):
+                print(f"Error: TV file {TVN_file} name given, but does not exist. Skipping frame {j}.")
+                continue
+            if verbose: 
+                print(f"[{j+1}/{ntimes}] Loading TV: {TVN_file}")
+            TV_reader = vtkPolyDataReader()
+            TV_reader.SetFileName(TVN_file)
+            TV_reader.Update()
+            TV = vtkPolyData().NewInstance()
+            TV.ShallowCopy(TV_reader.GetOutput())
+
+        # Generate normals for RV
+        normalGenerator = vtkPolyDataNormals()
+        normalGenerator.SetInputData(RV)
+        normalGenerator.ComputePointNormalsOn()
+        normalGenerator.ComputeCellNormalsOff()
+        normalGenerator.AutoOrientNormalsOn()
+        normalGenerator.FlipNormalsOn()
+        normalGenerator.Update()
+        RV = normalGenerator.GetOutput()
+        
+        # 
+        # Get cell data and filter for elemTag == 3
+        cell_data = RV.GetCellData()
+        elem_tag_array = cell_data.GetArray('elemTag')
+        # Get point IDs from cells with elemTag == 3
+        septum_point_ids = set()
+        for cellID in range(RV.GetNumberOfCells()):
+            if elem_tag_array.GetValue(cellID) == 3:
+                cell = RV.GetCell(cellID)
+                for i in range(cell.GetNumberOfPoints()):
+                    septum_point_ids.add(cell.GetPointId(i))
+        verbose_point_flag=True
+        # Iterate over all points, but only process those NOT in elemTag=3
+        for ptID in range(refRV.GetNumberOfPoints()):
+            if ptID not in septum_point_ids:
+                tvConeCollision[ptID] = 0
+                rvConeCollision[ptID] = 0
+                pmConeCollision[ptID] = 0
+                combinedConeCollision[ptID] = 0
+                continue
+                
+ 
+            strPos = np.array(RV.GetPoint(ptID))
+            normal = np.array(RV.GetPointData().GetArray("Normals").GetTuple(ptID))
+            
+            # Generate cone directions
+            directions = generate_cone_directions(normal, cone_angle, num_cone_samples)
+            if verbose and verbose_point_flag: 
+                print(f'pt{ptID} directions: {directions}')
+            
+            # Test each direction in the cone
+            for dir_idx, direction in enumerate(directions):
+                if verbose and verbose_point_flag:                     
+                    print(f'Testing direction {dir_idx}: {direction}')
+
+                rv_col, pm_col, tv_col = check_collision_for_direction(
+                    strPos, direction, height, radius, RV, PM, TV, refRV
+                )
+                if verbose and verbose_point_flag: 
+                    print(f'rv_col: {rv_col}, pm_col: {pm_col}, tv_col: {tv_col}')
+                # For the first direction (original normal), record standard collisions
+                if dir_idx == 0:
+                    if rv_col:
+                        collisionArray[ptID] = 1
+                        sumCollisions[ptID] = 1
+                    if pm_col:
+                        pmCollisionArray[ptID] = 1
+                        sumPMCollisions[ptID] = 1
+                    if tv_col and TV is not None:
+                        tvCollisionArray[ptID] = 1
+                        sumTVCollisions[ptID] = 1
+                
+                # If any direction does not collide - set collision to 0 for the cone code
+                if not rv_col:
+                    rvConeCollision[ptID] = 0
+                if not pm_col:
+                    pmConeCollision[ptID] = 0
+                if not tv_col and TV is not None:
+                    tvConeCollision[ptID] = 0
+                
+                # Combined collision for any direction in the cone
+                #no_combined_collision = not rv_col and not pm_col and (not tv_col if TV is not None else True)
+                no_combined_collision = not rvConeCollision[ptID] and not pmConeCollision[ptID] and (not tvConeCollision[ptID] if TV is not None else True)
+                
+                if no_combined_collision:
+                    combinedConeCollision[ptID] = 0
+                    # If any directions gives no collision then skip
+                    continue 
+                
+            if verbose_point_flag: 
+                verbose_point_flag=False # Only print verbose output for first septal point 
+        
+        # Calculate cone collision percentages for this frame
+        num_directions = len(directions) if directions is not None and len(directions) > 0 else num_cone_samples
+        rvConeCollisionPercent = rvConeCollision
+        pmConeCollisionPercent = pmConeCollision
+        tvConeCollisionPercent = tvConeCollision if TV is not None else np.zeros(num_points)
+        combinedConeCollisionPercent = combinedConeCollision 
+        
+        # Update cumulative cone collision sums
+        sumRVConeCollisions += rvConeCollision
+        sumPMConeCollisions += pmConeCollision
+        sumTVConeCollisions += tvConeCollision
+        sumCombinedConeCollisions += combinedConeCollision
+        
+        # Save results for this frame
+        reader = vtkPolyDataReader()
+        reader.SetFileName(RVN_file)
+        reader.Update()
+        RV = vtkPolyData().NewInstance()
+        RV.ShallowCopy(reader.GetOutput())
+        
+        # Add standard collision data
+        colParam_vtk = numpy_support.numpy_to_vtk(collisionArray)
+        colParam_vtk.SetName('RV_Collision')
+        RV.GetPointData().AddArray(colParam_vtk)
+        
+        pmColParam_vtk = numpy_support.numpy_to_vtk(pmCollisionArray)
+        pmColParam_vtk.SetName('PM_Collision')
+        RV.GetPointData().AddArray(pmColParam_vtk)
+        
+        if TV_files is not None:
+            tvColParam_vtk = numpy_support.numpy_to_vtk(tvCollisionArray)
+            tvColParam_vtk.SetName('TV_Collision')
+            RV.GetPointData().AddArray(tvColParam_vtk)
+        
+        # Combine collision data
+        if TV_files is not None:
+            combinedCollisionArray = np.logical_or(np.logical_or(collisionArray, pmCollisionArray), tvCollisionArray).astype(int)
+        else:
+            combinedCollisionArray = np.logical_or(collisionArray, pmCollisionArray).astype(int)
+        
+        sumCombinedCollisions += combinedCollisionArray
+        
+        combinedColParam_vtk = numpy_support.numpy_to_vtk(combinedCollisionArray)
+        combinedColParam_vtk.SetName('Combined_Collision')
+        RV.GetPointData().AddArray(combinedColParam_vtk)
+        
+        # Add cone collision percentage data
+        rvConePercent_vtk = numpy_support.numpy_to_vtk(rvConeCollisionPercent)
+        rvConePercent_vtk.SetName('RV_Collision_Cone_Percent')
+        RV.GetPointData().AddArray(rvConePercent_vtk)
+        
+        pmConePercent_vtk = numpy_support.numpy_to_vtk(pmConeCollisionPercent)
+        pmConePercent_vtk.SetName('PM_Collision_Cone_Percent')
+        RV.GetPointData().AddArray(pmConePercent_vtk)
+        
+        if TV_files is not None:
+            tvConePercent_vtk = numpy_support.numpy_to_vtk(tvConeCollisionPercent)
+            tvConePercent_vtk.SetName('TV_Collision_Cone_Percent')
+            RV.GetPointData().AddArray(tvConePercent_vtk)
+        
+        combinedConePercent_vtk = numpy_support.numpy_to_vtk(combinedConeCollisionPercent)
+        combinedConePercent_vtk.SetName('Combined_Collision_Cone_Percent')
+        RV.GetPointData().AddArray(combinedConePercent_vtk)
+        
+        # Write VTK file
+        outname = out_files + str(j) + '.vtk'
+        writer = vtkPolyDataWriter()
+        writer.SetFileName(outname)
+        writer.SetInputData(RV)
+        writer.Write()
+        
+        if verbose:
+            print(f"[{j+1}/{ntimes}] Processed frame {j}")
+    
+    # Calculate overall percentages across all frames
+    RV_Collision_Percent = (sumCollisions / ntimes) * 100
+    PM_Collision_Percent = (sumPMCollisions / ntimes) * 100
+    TV_Collision_Percent = (sumTVCollisions / ntimes) * 100 if TV_files is not None else np.zeros(num_points)
+    Combined_Collision_Percent = (sumCombinedCollisions / ntimes) * 100
+    
+    # Calculate overall cone collision percentages
+    total_cone_samples = ntimes #* num_cone_samples
+    RV_Collision_Cone_Percent = (sumRVConeCollisions / total_cone_samples) * 100
+    PM_Collision_Cone_Percent = (sumPMConeCollisions / total_cone_samples) * 100
+    TV_Collision_Cone_Percent = (sumTVConeCollisions / total_cone_samples) * 100 if TV_files is not None else np.zeros(num_points)
+    Combined_Collision_Cone_Percent = (sumCombinedConeCollisions / total_cone_samples) * 100
+    
+    if verbose: 
+        print('Add summary arrays to reference mesh')
+    # Add summary arrays to reference mesh
+    reader = vtkPolyDataReader()
+    reader.SetFileName(RV0_file)
+    reader.Update()
+    RV_summary = vtkPolyData()
+    RV_summary.ShallowCopy(reader.GetOutput())
+    
+    # Add standard collision percentages
+    rv_pct_vtk = numpy_support.numpy_to_vtk(RV_Collision_Percent)
+    rv_pct_vtk.SetName('RV_Collision_Percent')
+    RV_summary.GetPointData().AddArray(rv_pct_vtk)
+    
+    pm_pct_vtk = numpy_support.numpy_to_vtk(PM_Collision_Percent)
+    pm_pct_vtk.SetName('PM_Collision_Percent')
+    RV_summary.GetPointData().AddArray(pm_pct_vtk)
+    
+    if TV_files is not None:
+        tv_pct_vtk = numpy_support.numpy_to_vtk(TV_Collision_Percent)
+        tv_pct_vtk.SetName('TV_Collision_Percent')
+        RV_summary.GetPointData().AddArray(tv_pct_vtk)
+    
+    combined_pct_vtk = numpy_support.numpy_to_vtk(Combined_Collision_Percent)
+    combined_pct_vtk.SetName('Combined_Collision_Percent')
+    RV_summary.GetPointData().AddArray(combined_pct_vtk)
+    
+    # Add cone collision percentages
+    rv_cone_pct_vtk = numpy_support.numpy_to_vtk(RV_Collision_Cone_Percent)
+    rv_cone_pct_vtk.SetName('RV_Collision_Cone_Percent')
+    RV_summary.GetPointData().AddArray(rv_cone_pct_vtk)
+    
+    pm_cone_pct_vtk = numpy_support.numpy_to_vtk(PM_Collision_Cone_Percent)
+    pm_cone_pct_vtk.SetName('PM_Collision_Cone_Percent')
+    RV_summary.GetPointData().AddArray(pm_cone_pct_vtk)
+    
+    if TV_files is not None:
+        tv_cone_pct_vtk = numpy_support.numpy_to_vtk(TV_Collision_Cone_Percent)
+        tv_cone_pct_vtk.SetName('TV_Collision_Cone_Percent')
+        RV_summary.GetPointData().AddArray(tv_cone_pct_vtk)
+    
+    combined_cone_pct_vtk = numpy_support.numpy_to_vtk(Combined_Collision_Cone_Percent)
+    combined_cone_pct_vtk.SetName('Combined_Collision_Cone_Percent')
+    RV_summary.GetPointData().AddArray(combined_cone_pct_vtk)
+    
+    # Write to RV_collision-all_times.vtk file
+    all_times_outname = out_files + 'all_times.vtk'
+    writer = vtkPolyDataWriter()
+    writer.SetFileName(all_times_outname)
+    writer.SetInputData(RV_summary)
+    writer.Write()
+    
+    print(f"All times summary file saved: {all_times_outname}")
+    
+    # Save CSV if requested
+    if save_csv:
+        csv_outname = out_files + 'all_times.csv'
+        with open(csv_outname, 'w', newline='') as csvfile:
+            fieldnames = ['Point_ID', 'RV_Collision_Percent', 'PM_Collision_Percent', 
+                         'Combined_Collision_Percent', 'RV_Collision_Cone_Percent',
+                         'PM_Collision_Cone_Percent', 'Combined_Collision_Cone_Percent']
+            if TV_files is not None:
+                fieldnames.insert(3, 'TV_Collision_Percent')
+                fieldnames.insert(7, 'TV_Collision_Cone_Percent')
+            
+            writer_csv = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer_csv.writeheader()
+            
+            for ptID in range(num_points):
+                row = {
+                    'Point_ID': ptID,
+                    'RV_Collision_Percent': RV_Collision_Percent[ptID],
+                    'PM_Collision_Percent': PM_Collision_Percent[ptID],
+                    'Combined_Collision_Percent': Combined_Collision_Percent[ptID],
+                    'RV_Collision_Cone_Percent': RV_Collision_Cone_Percent[ptID],
+                    'PM_Collision_Cone_Percent': PM_Collision_Cone_Percent[ptID],
+                    'Combined_Collision_Cone_Percent': Combined_Collision_Cone_Percent[ptID]
+                }
+                if TV_files is not None:
+                    row['TV_Collision_Percent'] = TV_Collision_Percent[ptID]
+                    row['TV_Collision_Cone_Percent'] = TV_Collision_Cone_Percent[ptID]
+                
+                writer_csv.writerow(row)
+        
+        print(f"CSV file saved: {csv_outname}")
+    
+    return RV_summary
 
 def get_specs(device_name, new_L): 
     devices = {
