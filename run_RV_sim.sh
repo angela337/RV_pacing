@@ -1,4 +1,4 @@
-
+#!/bin/bash
 ##############################
 gradientEdgeDetect=false
 label_BP_TV=false
@@ -29,7 +29,23 @@ getCollision=false
 #motion_tracking=true
 getCollision=true
 #############################
+# To detach and run remotely use: 
+# setsid ./run_RV_sim.sh > run_RV_sim1-4.log 2>&1 & ## PID: 297129
+# setsid ./run_RV_sim.sh > run_RV_sim6-9.log 2>&1 & ## PID: 297799 
+# setsid ./run_RV_sim.sh > run_RV_sim10-13.log 2>&1 & ## PID: 299394
 
+# setsid ./run_RV_sim.sh > run_RV_sim1-4_10.log 2>&1 & ## PID: 304722
+# setsid ./run_RV_sim.sh > run_RV_sim6-9_10.log 2>&1 & ## PID:  304981
+# setsid ./run_RV_sim.sh > run_RV_sim10-13_10.log 2>&1 & ## PID: 305203
+
+# To check: 
+# ps -ef | grep run_RV_sim.sh
+# ps -ef | grep RV_collision.py
+
+# To kill specific PID: 
+# pkill -TERM -P ${PID} # kill child processes
+# kill ${PID} # kill main
+#############################
 # Home paths
 MSHF_path=/data_fast/Work/MS_HF_cohort/
 python_path=/data_slow/Dropbox/Work/Atria/code/python/vtk_extras
@@ -43,8 +59,11 @@ transform_image=/home/alee9/Work/software/CemrgApp-Linux_v2.3-rc4/bin/MLib/trans
 #meshtool=/home/carp_2024/CARPentry_ICL_latest/meshtool/meshtool
 #transform_points=/data5/alee9/software/CemrgApp-Linux_v2.3-rc4/bin/MLib/transform-points
 
-for casenum in 02 #10 08 #04 #{06..11} 13 # 02 04 {05..11} 13 # No/bad data or fail at 3,5,12 01
-#for casenum in 10 11 13 # 06 04 #02 01 # 13 11 10 # 09 08 07 #   06 07 08 09 #
+#for casenum in 01 02 04 {06..11} 13 # 02 04 {05..11} 13 # No/bad data or fail at 3,5,12 01
+#for casenum in 10 11 13 # 06 04 #02 01 # PID: 
+#for casenum in {06..09} # PID:287713 > run_RV_sim6-9.log
+#for casenum in 01 02 04 # PID: 284574 > run_RV_sim1-4.log #13 11 10 09 08 07 06 04 02 01 # 
+for casenum in 04
 do 
     segPath=${MSHF_path}/data/$casenum/1_seg/
 #    segPath=/data5/alee9/MS_HF_cohort/$casenum/RV/
@@ -138,14 +157,15 @@ do
         ${meshtool} smooth mesh -msh=${segPath}/RV_wall.surfmesh -tags=40 -outmsh=${segPath}/RV_smooth -ifmt=vtk -ofmt=vtk_polydata -smth=0.7
         python ${python_path}/vtk_scar_map.py ${segPath}/LVwall_Dilated_by_1_3_3_3.nii ${segPath}/RV_smooth.vtk ${segPath}/RV_smooth.vtk 
         
-        ${meshtool} resample surfmesh -msh=${segPath}/RV_smooth -outmsh=${segPath}/RV_dec -ifmt=vtk -ofmt=vtk_polydata -avrg=5
+        ${meshtool} resample surfmesh -msh=${segPath}/RV_smooth -outmsh=${segPath}/RV_dec -ifmt=vtk -ofmt=vtk_polydata -avrg=2
         #rm ${segPath}/RV_wall*  #${segPath}/RV_smooth* 
         # Remove the small elements 
-        python ${python_path}/remove_small_cells.py -msh ${segPath}/RV_dec.vtk -cell_area_min 1 -outmsh ${segPath}/RV_dec_filtered.vtk
+        python ${python_path}/remove_small_cells.py -msh ${segPath}/RV_dec.vtk -cell_area_min 0.2 -outmsh ${segPath}/RV_dec_filtered.vtk
         # Separate the RV wall and septum
-        #python ${python_path}/vtk_scar_map.py ${segPath}/LVwall_Dilated_by_1_3_3_3.nii ${segPath}/RV_dec.vtk ${segPath}/RV_dec.vtk 
+        python ${python_path}/vtk_scar_map.py ${segPath}/LVwall_Dilated_by_1_3_3_3.nii ${segPath}/RV_dec_filtered.vtk ${segPath}/RV_dec_filtered.vtk 
 
     fi
+    python ${python_path}/vtk_scar_map.py ${segPath}/LVwall_Dilated_by_1_3_3_3.nii ${segPath}/RV_dec_filtered.vtk ${segPath}/RV_dec_filtered.vtk 
     INDEX_FILE="${MSHF_path}/data/cone_indices_on_PMvtp.csv"
     if [ "$make_cone" = true ]; then 
         # Find the matching line in the CSV
@@ -207,7 +227,7 @@ do
     #ls 
     if $motion_tracking; then 
         # python ${python_path}/flip_mesh.py ${segPath}/BiV_masked_PM.vtk ${MSHF_path}/data/${casenum}/2_motion/BiV_masked_flip.vtk
-        # python ${python_path}/flip_mesh.py ${segPath}/RV_dec_filtered.vtk ${MSHF_path}/data/${casenum}/2_motion/RV_dec_flip.vtk
+        python ${python_path}/flip_mesh.py ${segPath}/RV_dec_filtered.vtk ${MSHF_path}/data/${casenum}/2_motion/RV_dec_flip.vtk
         # python ${python_path}/flip_mesh.py ${segPath}/RV_smooth.vtk ${MSHF_path}/data/${casenum}/2_motion/RV_smooth_flip.vtk
         # python ${python_path}/flip_mesh.py ${segPath}/PM/PM_dec.vtk ${MSHF_path}/data/${casenum}/2_motion/PM_flip.vtk
         # python ${python_path}/flip_mesh.py ${segPath}/PM/TV_cone.vtp ${MSHF_path}/data/${casenum}/2_motion/TV_flip.vtk
@@ -227,9 +247,9 @@ do
             echo $frame                                    
             frame10=$((frame*10))
             # Whole mesh
-            ${transform_points}  ${init_mesh} ${trackingPath}/tracked/transformed-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3 
+            #${transform_points}  ${init_mesh} ${trackingPath}/tracked/transformed-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3 
             # RV wall 
-            #${transform_points}  ${RVinit_mesh} ${trackingPath}/tracked/RV_dec-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3 
+            ${transform_points}  ${RVinit_mesh} ${trackingPath}/tracked/RV_dec-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3 
             #${transform_points}  ${RVsmthinit_mesh} ${trackingPath}/tracked/RV_smth-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3 
             # PM
             #${transform_points}  ${PMinit_mesh} ${trackingPath}/tracked/PM-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3 
@@ -271,9 +291,19 @@ do
     # fi
 
     #mkdir -p ${trackingPath}/T-PM/ # Simulate transvenous PM 
+    MAX_JOBS=16   # change this to any number you want
+
+    run_limited() {
+        local max_jobs=$1
+        shift
+        while (( $(jobs -r | wc -l) >= max_jobs )); do
+            sleep 1
+        done
+        "$@" &
+    }
 
     if $getCollision; then 
-        for device in Micra #AveirAR AveirVR # AveirAR # "Micra": {"D": 6.7, "L": 25.9}, # AV/AV2 Micra #AveirAR # AveirVR 
+        for device in Micra # AveirAR AveirVR # AveirAR # "Micra": {"D": 6.7, "L": 25.9}, # AV/AV2 Micra #AveirAR # AveirVR 
         do 
             mkdir -p ${trackingPath}/$device/
             # mkdir -p ${trackingPath}/T-PM/$device/
@@ -288,8 +318,8 @@ do
                 init_len=30
             fi
 
-            #for new_length in $init_len 15 20 25 30 35 40 45 # 45 40 35 30 25 20 15 #
-            for new_length in 30 #45 40 35 30 25 20 15 $init_len #
+            for new_length in $init_len 15 20 25 30 35 40 45 # 45 40 35 30 25 20 15 #
+            #for new_length in 45 40 35 30 25 20 15 $init_len #
             do
                 
                 #mkdir -p ${trackingPath}/$device/L${new_length}
@@ -300,11 +330,11 @@ do
                 #mkdir -p ${trackingPath}/T-PM/$device/L${new_length}
                 #python ${python_path}/RV_collision.py -RV_files ${trackingPath}/tracked/RV_dec- -PM_files ${trackingPath}/tracked/PM- -TV_files ${trackingPath}/tracked/TV- -out_files ${trackingPath}/T-PM/$device/L${new_length}/RV_collision- -device $device -L ${new_length} -v #-TV_ring_files ${trackingPath}/tracked/TV_ring-
 
-                devicePath=${trackingPath}/${device}_cone10_10
-                mkdir -p ${devicePath}
-                mkdir -p ${devicePath}/L${new_length}
-                #if ! [ -f ${devicePath}/L${new_length}/RV_collision-all_times.csv ]; then
-                    python ${MSHF_path}/code/RV_collision.py -RV_files ${trackingPath}/tracked/RV_dec- -PM_files ${trackingPath}/tracked/PM-  -TV_files ${trackingPath}/tracked/TV- -out_files ${devicePath}/L${new_length}/RV_collision- -device $device -L ${new_length} -cone_angle 10 -num_cone_samples 10 --save_csv --verbose      
+                # devicePath=${trackingPath}/${device}_cone10_10
+                # mkdir -p ${devicePath}
+                # mkdir -p ${devicePath}/L${new_length}
+                # #if ! [ -f ${devicePath}/L${new_length}/RV_collision-all_times.csv ]; then
+                # python ${MSHF_path}/code/RV_collision.py -RV_files ${trackingPath}/tracked/RV_dec- -PM_files ${trackingPath}/tracked/PM-  -TV_files ${trackingPath}/tracked/TV- -out_files ${devicePath}/L${new_length}/RV_collision- -device $device -L ${new_length} -cone_angle 10 -num_cone_samples 10 --save_csv --verbose      
                 #else
                 #     echo "#############################################################"
                 #     echo "File ${devicePath}/L${new_length}/RV_collision-all_times.csv EXISTS! Skipping RV_collision.py calculation"
@@ -313,14 +343,26 @@ do
                 devicePath=${trackingPath}/${device}_cone5_10/
                 mkdir -p ${devicePath}
                 mkdir -p ${devicePath}/L${new_length}
+                
                 if ! [ -f ${devicePath}/L${new_length}/RV_collision-all_times.csv ]; then
-                    python ${MSHF_path}/code/RV_collision.py -RV_files ${trackingPath}/tracked/RV_dec- -PM_files ${trackingPath}/tracked/PM-  -TV_files ${trackingPath}/tracked/TV- -out_files ${devicePath}/L${new_length}/RV_collision- -device $device -L ${new_length} -cone_angle 5 -num_cone_samples 10 --save_csv --verbose      
-                else
+                    run_limited $MAX_JOBS \
+                    python -u ${MSHF_path}/code/RV_collision.py \
+                        -RV_files ${trackingPath}/tracked/RV_dec- \
+                        -PM_files ${trackingPath}/tracked/PM- \
+                        -TV_files ${trackingPath}/tracked/TV- \
+                        -out_files ${devicePath}/L${new_length}/RV_collision- \
+                        -device $device \
+                        -L ${new_length} \
+                        -cone_angle 5 \
+                        -num_cone_samples 10 \
+                        --save_csv \
+                        --verbose \
+                        > ${devicePath}/L${new_length}/RV_collision.log 2>&1
+                else 
                     echo "#############################################################"
                     echo "File ${devicePath}/L${new_length}/RV_collision-all_times.csv EXISTS! Skipping RV_collision.py calculation"
                     echo "#############################################################"
-                
-                fi 
+                fi
             done
         done
     fi

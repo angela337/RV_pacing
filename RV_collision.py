@@ -83,7 +83,7 @@ def generate_cone_directions(normal, cone_angle_deg, num_samples):
     
     return directions
 
-def check_collision_for_direction(strPos, direction, height, radius, RV, PM, TV, refRV):
+def check_collision_for_direction(strPos, direction, height, radius, RV, PM, TV, refRV,septum_point_ids=None):
     """
     Check if a cylinder in a given direction collides with any structures.
     
@@ -97,12 +97,16 @@ def check_collision_for_direction(strPos, direction, height, radius, RV, PM, TV,
     tv_collision = False
     
     # Check RV wall collision
-    for ID in range(0, refRV.GetNumberOfPoints()):
+    for ID in range(0, RV.GetNumberOfPoints()):
         tstPoint = np.array(RV.GetPoint(ID))
         distance = np.sqrt(vtkMath.Distance2BetweenPoints(strPos, tstPoint))
-        if distance < (radius * 2): # If distance for the test point is too close to the attachment point - don't check these points 
+        exclusion_distance = 10
+        if distance < exclusion_distance: #(radius * 2): # If distance for the test point is too close to the attachment point - don't check these points 
+            continue        
+        if distance > 1.1*height:
             continue
-        
+        if septum_point_ids is not None and ID in septum_point_ids: # Don't test for collision against septum points. 
+            continue
         result = cylTest(strPos, endPos, tstPoint, pow(height, 2), pow(radius, 2))
         if result:
             rv_collision = True
@@ -126,324 +130,10 @@ def check_collision_for_direction(strPos, direction, height, radius, RV, PM, TV,
                 break
     
     return rv_collision, pm_collision, tv_collision
-'''
+
 def generateLocationMap(RV_files, PM_files, TV_files, out_files, radius=6.5/2, height=42, 
-                       ntimes=10, cone_angle=0, num_cone_samples=10, save_csv=False, verbose=False):
-    """
-    Modified to support cone rotation analysis.
-    
-    New parameters:
-    - cone_angle: half-angle of the cone in degrees (0 = no rotation)
-    - num_cone_samples: number of directions to test within the cone
-    """
-    print(f'Cone angle: {cone_angle}')
-    print(f'Num cone samples: {num_cone_samples}')
-    # Load reference meshes
-    reader = vtkPolyDataReader()
-    RV0_file = RV_files + "0.vtk"
-    reader.SetFileName(RV0_file)
-    reader.Update()
-    refRV = vtkPolyData()
-    refRV.ShallowCopy(reader.GetOutput())
-    
-    PM_reader = vtkPolyDataReader()
-    PM0_file = PM_files + "0.vtk"
-    PM_reader.SetFileName(PM0_file)
-    PM_reader.Update()
-    refPM = vtkPolyData()
-    refPM.ShallowCopy(PM_reader.GetOutput())
-    
-    if TV_files is not None:
-        TV_reader = vtkPolyDataReader()
-        TV0_file = TV_files + "0.vtk"
-        TV_reader.SetFileName(TV0_file)
-        TV_reader.Update()
-        refTV = vtkPolyData()
-        refTV.ShallowCopy(TV_reader.GetOutput())
-
-    # Initialize arrays
-    num_points = refRV.GetNumberOfPoints()
-    sumCollisions = np.zeros(num_points)
-    sumPMCollisions = np.zeros(num_points)
-    sumTVCollisions = np.zeros(num_points)
-    sumCombinedCollisions = np.zeros(num_points)
-    
-    # New arrays for cone analysis
-    collision_free_count = np.zeros(num_points)  # Number of collision-free orientations
-    best_cone_angle = np.zeros(num_points)  # Best angle found (if any)
-    has_collision_free = np.zeros(num_points)  # Binary: 1 if any collision-free orientation exists
-
-    # Loop through time frames
-    for j in range(0, ntimes):
-        collisionArray = np.zeros(num_points)
-        pmCollisionArray = np.zeros(num_points)
-        tvCollisionArray = np.zeros(num_points)
-        
-        # New arrays for this frame
-        frame_collision_free_count = np.zeros(num_points)
-        frame_has_collision_free = np.zeros(num_points)
-        
-        # Load meshes at this time point
-        RVN_file = RV_files + str(j) + '.vtk'        
-        if not os.path.isfile(RVN_file):
-            print(f"Error: RV file {RVN_file} does not exist. Skipping frame {j}.")
-            continue
-        
-        if verbose: 
-            print(f"[{j+1}/{ntimes}] Loading RV: {RVN_file}")
-
-        reader = vtkPolyDataReader()
-        reader.SetFileName(RVN_file)
-        reader.Update()
-        RV = vtkPolyData().NewInstance()
-        RV.ShallowCopy(reader.GetOutput())
-        
-        PMN_file = PM_files + str(j) + '.vtk'
-        if not os.path.isfile(PMN_file):
-            print(f"Error: PM file {PMN_file} does not exist. Skipping frame {j}.")
-            continue
-        if verbose: 
-            print(f"[{j+1}/{ntimes}] Loading PM: {PMN_file}")
-        PM_reader = vtkPolyDataReader()
-        PM_reader.SetFileName(PMN_file)
-        PM_reader.Update()
-        PM = vtkPolyData().NewInstance()
-        PM.ShallowCopy(PM_reader.GetOutput())
-        
-        TV = None
-        if TV_files is not None:
-            TVN_file = TV_files + str(j) + '.vtk'
-            if not os.path.isfile(TVN_file):
-                print(f"Error: TV file {TVN_file} name given, but does not exist. Skipping frame {j}.")
-                continue
-            if verbose: 
-                print(f"[{j+1}/{ntimes}] Loading TV: {TVN_file}")
-            TV_reader = vtkPolyDataReader()
-            TV_reader.SetFileName(TVN_file)
-            TV_reader.Update()
-            TV = vtkPolyData().NewInstance()
-            TV.ShallowCopy(TV_reader.GetOutput())
-
-        # Generate normals for RV
-        normalGenerator = vtkPolyDataNormals()
-        normalGenerator.SetInputData(RV)
-        normalGenerator.ComputePointNormalsOn()
-        normalGenerator.ComputeCellNormalsOff()
-        normalGenerator.AutoOrientNormalsOn()
-        normalGenerator.FlipNormalsOn()
-        normalGenerator.Update()
-        RV = normalGenerator.GetOutput()
-        
-        # Loop through locations on RV wall
-        for ptID in range(0, refRV.GetNumberOfPoints()):
-            strPos = np.array(RV.GetPoint(ptID))
-            normal = np.array(RV.GetPointData().GetArray("Normals").GetTuple(ptID))
-            
-            # Generate cone directions
-            directions = generate_cone_directions(normal, cone_angle, num_cone_samples)
-            if verbose: 
-                if ptID==0: 
-                    print(f'pt0 directions: {directions}')
-            
-            collision_free_found = False
-            best_angle_for_point = -1
-            
-            # Test each direction in the cone
-            for dir_idx, direction in enumerate(directions):
-                if verbose:
-                    if ptID==0:  
-                        print(f'Testing direction {dir_idx}: {direction}')
-
-                rv_col, pm_col, tv_col = check_collision_for_direction(
-                    strPos, direction, height, radius, RV, PM, TV, refRV
-                )
-
-                # Check if this direction is collision-free
-                any_collision = rv_col or pm_col or (tv_col if TV is not None else False)
-                
-                if not any_collision:
-                    collision_free_found = True
-                    frame_collision_free_count[ptID] += 1
-                    if best_angle_for_point < 0:
-                        # Calculate approximate angle from normal
-                        if dir_idx == 0:
-                            best_angle_for_point = 0
-                        else:
-                            best_angle_for_point = cone_angle
-                
-                # For the first direction (original normal), record standard collisions
-                if dir_idx == 0:
-                    if rv_col:
-                        collisionArray[ptID] = 1
-                        sumCollisions[ptID] = 1
-                    if pm_col:
-                        pmCollisionArray[ptID] = 1
-                        sumPMCollisions[ptID] = 1
-                    if tv_col and TV is not None:
-                        tvCollisionArray[ptID] = 1
-                        sumTVCollisions[ptID] = 1
-            
-            # Update collision-free tracking
-            if collision_free_found:
-                frame_has_collision_free[ptID] = 1
-                has_collision_free[ptID] = 1
-                collision_free_count[ptID] += frame_collision_free_count[ptID]
-                if best_angle_for_point >= 0:
-                    best_cone_angle[ptID] = best_angle_for_point
-        
-        # Save results for this frame
-        reader = vtkPolyDataReader()
-        reader.SetFileName(RVN_file)
-        reader.Update()
-        RV = vtkPolyData().NewInstance()
-        RV.ShallowCopy(reader.GetOutput())
-        
-        # Add standard collision data
-        colParam_vtk = numpy_support.numpy_to_vtk(collisionArray)
-        colParam_vtk.SetName('RV_Collision')
-        RV.GetPointData().AddArray(colParam_vtk)
-        
-        pmColParam_vtk = numpy_support.numpy_to_vtk(pmCollisionArray)
-        pmColParam_vtk.SetName('PM_Collision')
-        RV.GetPointData().AddArray(pmColParam_vtk)
-        
-        if TV_files is not None:
-            tvColParam_vtk = numpy_support.numpy_to_vtk(tvCollisionArray)
-            tvColParam_vtk.SetName('TV_Collision')
-            RV.GetPointData().AddArray(tvColParam_vtk)
-        
-        # Combine collision data
-        if TV_files is not None:
-            combinedCollisionArray = np.logical_or(np.logical_or(collisionArray, pmCollisionArray), tvCollisionArray).astype(int)
-        else:
-            combinedCollisionArray = np.logical_or(collisionArray, pmCollisionArray).astype(int)
-        
-        sumCombinedCollisions += combinedCollisionArray
-        
-        combinedColParam_vtk = numpy_support.numpy_to_vtk(combinedCollisionArray)
-        combinedColParam_vtk.SetName('Combined_Collision')
-        RV.GetPointData().AddArray(combinedColParam_vtk)
-        
-        # Add cone analysis data
-        frame_cf_vtk = numpy_support.numpy_to_vtk(frame_collision_free_count)
-        frame_cf_vtk.SetName('Collision_Free_Count')
-        RV.GetPointData().AddArray(frame_cf_vtk)
-        
-        frame_has_cf_vtk = numpy_support.numpy_to_vtk(frame_has_collision_free)
-        frame_has_cf_vtk.SetName('Has_Collision_Free')
-        RV.GetPointData().AddArray(frame_has_cf_vtk)
-        
-        outname = out_files + str(j) + '.vtk'
-        writer = vtkPolyDataWriter()
-        writer.SetFileName(outname)
-        writer.SetInputData(RV)
-        writer.Write()
-        
-        if verbose:
-            num_cf = np.sum(frame_has_collision_free)
-            print(f"[{j+1}/{ntimes}] Processed frame {j}: {num_cf}/{num_points} points have collision-free orientations")
-    
-    # Store aggregate results
-    num_frames = ntimes
-    
-    # Standard collision data
-    colParam_vtk = numpy_support.numpy_to_vtk(sumCollisions)
-    colParam_vtk.SetName('RV_Collision')
-    refRV.GetPointData().AddArray(colParam_vtk)
-
-    pmColParam_vtk = numpy_support.numpy_to_vtk(sumPMCollisions)
-    pmColParam_vtk.SetName('PM_Collision')
-    refRV.GetPointData().AddArray(pmColParam_vtk)
-    
-    if TV_files is not None:
-        tvColParam_vtk = numpy_support.numpy_to_vtk(sumTVCollisions)
-        tvColParam_vtk.SetName('TV_Collision')
-        refRV.GetPointData().AddArray(tvColParam_vtk)
-    
-    if TV_files is not None:
-        sumCombinedCollisions = np.logical_or(np.logical_or(sumCollisions, sumPMCollisions), sumTVCollisions).astype(int)
-    else:
-        sumCombinedCollisions = np.logical_or(sumCollisions, sumPMCollisions).astype(int)
-    
-    combinedColParam_vtk = numpy_support.numpy_to_vtk(sumCombinedCollisions)
-    combinedColParam_vtk.SetName('Combined_Collision')
-    refRV.GetPointData().AddArray(combinedColParam_vtk)
-
-    # Percentage collisions
-    sumCollisions_percent = (sumCollisions / num_frames) * 100
-    sumPMCollisions_percent = (sumPMCollisions / num_frames) * 100
-    sumTVCollisions_percent = (sumTVCollisions / num_frames) * 100 if TV_files is not None else None
-    sumCombinedCollisions_percent = (sumCombinedCollisions / num_frames) * 100
-
-    colParam_percent_vtk = numpy_support.numpy_to_vtk(sumCollisions_percent)
-    colParam_percent_vtk.SetName('RV_Collision_Percent')
-    refRV.GetPointData().AddArray(colParam_percent_vtk)
-
-    pmColParam_percent_vtk = numpy_support.numpy_to_vtk(sumPMCollisions_percent)
-    pmColParam_percent_vtk.SetName('PM_Collision_Percent')
-    refRV.GetPointData().AddArray(pmColParam_percent_vtk)
-
-    if TV_files is not None:
-        tvColParam_percent_vtk = numpy_support.numpy_to_vtk(sumTVCollisions_percent)
-        tvColParam_percent_vtk.SetName('TV_Collision_Percent')
-        refRV.GetPointData().AddArray(tvColParam_percent_vtk)
-
-    combinedColParam_percent_vtk = numpy_support.numpy_to_vtk(sumCombinedCollisions_percent)
-    combinedColParam_percent_vtk.SetName('Combined_Collision_Percent')
-    refRV.GetPointData().AddArray(combinedColParam_percent_vtk)
-    
-    # Add cone analysis results
-    has_cf_vtk = numpy_support.numpy_to_vtk(has_collision_free)
-    has_cf_vtk.SetName('Has_Collision_Free_Orientation')
-    refRV.GetPointData().AddArray(has_cf_vtk)
-    
-    cf_count_vtk = numpy_support.numpy_to_vtk(collision_free_count)
-    cf_count_vtk.SetName('Total_Collision_Free_Count')
-    refRV.GetPointData().AddArray(cf_count_vtk)
-    
-    best_angle_vtk = numpy_support.numpy_to_vtk(best_cone_angle)
-    best_angle_vtk.SetName('Best_Cone_Angle')
-    refRV.GetPointData().AddArray(best_angle_vtk)
-    
-    # Calculate percentage of collision-free orientations
-    collision_free_percent = (collision_free_count / (num_frames * num_cone_samples)) * 100
-    cf_percent_vtk = numpy_support.numpy_to_vtk(collision_free_percent)
-    cf_percent_vtk.SetName('Collision_Free_Percent')
-    refRV.GetPointData().AddArray(cf_percent_vtk)
-    
-    outname = out_files + 'all_times.vtk'
-    writer = vtkPolyDataWriter()
-    writer.SetFileName(outname)
-    writer.SetInputData(refRV)
-    writer.Write()
-    
-    # Save CSV summary
-    if save_csv:
-        csv_outname = out_files + 'collision_summary.csv'
-        with open(csv_outname, mode='w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            header = ['PointID', 'RV_Collision_Percent', 'PM_Collision_Percent']
-            if TV_files is not None:
-                header.append('TV_Collision_Percent')
-            header.extend(['Combined_Collision_Percent', 'Has_Collision_Free', 
-                          'Collision_Free_Percent', 'Best_Cone_Angle'])
-            writer.writerow(header)
-            
-            for i in range(refRV.GetNumberOfPoints()):
-                row = [i, sumCollisions_percent[i], sumPMCollisions_percent[i]]
-                if TV_files is not None:
-                    row.append(sumTVCollisions_percent[i])
-                row.extend([sumCombinedCollisions_percent[i], has_collision_free[i],
-                           collision_free_percent[i], best_cone_angle[i]])
-                writer.writerow(row)
-        
-        if verbose:
-            print(f"CSV summary saved to {csv_outname}")
-            total_cf = np.sum(has_collision_free)
-            print(f"\nSummary: {total_cf}/{num_points} points ({100*total_cf/num_points:.1f}%) have at least one collision-free orientation")
-'''
-def generateLocationMap(RV_files, PM_files, TV_files, out_files, radius=6.5/2, height=42, 
-                       ntimes=10, cone_angle=0, num_cone_samples=10, save_csv=False, verbose=False):
+                       ntimes=10, cone_angle=0, num_cone_samples=10, save_csv=False, verbose=False,
+                       RV_files_smooth=None):
     """
     Modified to support cone rotation analysis with collision percentages.
     
@@ -566,6 +256,7 @@ def generateLocationMap(RV_files, PM_files, TV_files, out_files, radius=6.5/2, h
                 cell = RV.GetCell(cellID)
                 for i in range(cell.GetNumberOfPoints()):
                     septum_point_ids.add(cell.GetPointId(i))
+
         verbose_point_flag=True
         # Iterate over all points, but only process those NOT in elemTag=3
         for ptID in range(refRV.GetNumberOfPoints()):
@@ -591,7 +282,7 @@ def generateLocationMap(RV_files, PM_files, TV_files, out_files, radius=6.5/2, h
                     print(f'Testing direction {dir_idx}: {direction}')
 
                 rv_col, pm_col, tv_col = check_collision_for_direction(
-                    strPos, direction, height, radius, RV, PM, TV, refRV
+                    strPos, direction, height, radius, RV, PM, TV, refRV,septum_point_ids
                 )
                 if verbose and verbose_point_flag: 
                     print(f'rv_col: {rv_col}, pm_col: {pm_col}, tv_col: {tv_col}')
@@ -626,7 +317,9 @@ def generateLocationMap(RV_files, PM_files, TV_files, out_files, radius=6.5/2, h
                 
             if verbose_point_flag: 
                 verbose_point_flag=False # Only print verbose output for first septal point 
-        
+            if verbose and ptID % 1000 == 0: 
+                print(f"Time[{j+1}/{ntimes}]: Processed {ptID} points out of {refRV.GetNumberOfPoints()}", flush=True)
+
         # Calculate cone collision percentages for this frame
         num_directions = len(directions) if directions is not None and len(directions) > 0 else num_cone_samples
         rvConeCollisionPercent = rvConeCollision
@@ -828,6 +521,7 @@ if __name__ == "__main__":
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument('-RV_files', help='Basename to decimated RV wall vtk file', default='RV_dec-')
+    parser.add_argument('-RV_files_smooth', help='Basename to smooth high resolution RV wall vtk file', default=None) #'RV_smth-'
     parser.add_argument('-PM_files', help='Basename to PM files (papillary muscles and cone to Tricuspid valve ring) vtk files', default='PM-')    
     parser.add_argument('-TV_files', help='Basename to Tricuspid valve ring vtk files', default=None)
     parser.add_argument('-out_files', help='Basename to output vtk files', default='RV_collision-')
@@ -844,6 +538,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     RV_files = args.RV_files
+    RV_files_smooth=args.RV_files_smooth
     PM_files = args.PM_files
     TV_files = args.TV_files
     out_files = args.out_files
@@ -859,6 +554,6 @@ if __name__ == "__main__":
         if args.cone_angle > 0:
             print(f'Cone rotation: ±{args.cone_angle}° with {args.num_cone_samples} samples')
     
-    generateLocationMap(RV_files, PM_files, TV_files, out_files, radius, height, ntimes,
-                       cone_angle=args.cone_angle, num_cone_samples=args.num_cone_samples,
-                       save_csv=args.save_csv, verbose=args.verbose)
+    generateLocationMap(RV_files, PM_files, TV_files, out_files, radius, height, ntimes, 
+                        cone_angle=args.cone_angle, num_cone_samples=args.num_cone_samples,
+                       save_csv=args.save_csv, verbose=args.verbose,RV_files_smooth=RV_files_smooth)
