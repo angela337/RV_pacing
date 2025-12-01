@@ -261,36 +261,8 @@ do
 
         done  
     fi 
-    
-    # if [[ ! -d  ${trackingPath}/tracked/ ]]; then 
-        
-    #     #mv ${trackingPath}/RV_dec-*.vtk ${trackingPath}/tracked/ 
-    #     #mv ${trackingPath}/RV_smth-*.vtk ${trackingPath}/tracked/ 
-    #     #mv ${trackingPath}/transformed-*.vtk ${trackingPath}/tracked/ 
-    # fi 
-    
-    # if $getCollision; then 
-    #     mkdir -p ${trackingPath}/RV_struct/
-    #     mkdir -p ${trackingPath}/RV_wall/
-    #     echo "Calculate collision for resampled 100 points from RV wall for case ${casenum}" 
-    #     #for (( frame = 0; frame<=10; frame++))
-    #     for frame in 4 #{0..10}
-    #     do  
-    #         echo "Calculate RV wall collision for case ${casenum}: time $frame"
-    #         #if [[ ! -f ${trackingPath}/RV_wall/mesh-${frame}.vtp ]]; then 
-    #         python ${python_path}/motion_collision_elem_efficient.py -transformedfile ${trackingPath}/tracked/transformed-${frame}.vtk -RVwallfile ${trackingPath}/tracked/RV_dec-${frame}.vtk -RVwallfile_smth ${trackingPath}/tracked/RV_smth-${frame}.vtk -outfile  ${trackingPath}/RV_wall/mesh-${frame}.vtp -outptfile ${trackingPath}/RV_wall/pt-${frame}.vtp -collision_target_tags "40" -vv --no-multiprocessing 
-    #         #fi
-    #         echo "Finished RV wall collision calc for case ${casenum}: time $frame"            
-
-    #         if [[ ! -f ${trackingPath}/RV_struct/mesh-${frame}.vtp ]]; then 
-    #             echo "Calculate RV struct collision for time $frame"
-    #         #    python ${python_path}/motion_collision_elem_efficient.py -transformedfile ${trackingPath}/tracked/transformed-${frame}.vtk -RVwallfile ${trackingPath}/tracked/RV_dec-${frame}.vtk -RVwallfile_smth ${trackingPath}/tracked/RV_smth-${frame}.vtk -outfile  ${trackingPath}/RV_struct/mesh-${frame}.vtp -outptfile ${trackingPath}/RV_struct/pt-${frame}.vtp -collision_target_tags "1" #
-    #         fi
-    #         echo "Finished RV struct collision calc for case ${casenum}: time $frame"
-    #     done
-    # fi
-
-    #mkdir -p ${trackingPath}/T-PM/ # Simulate transvenous PM 
+       
+  
     MAX_JOBS=16   # change this to any number you want
 
     run_limited() {
