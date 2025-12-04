@@ -16,7 +16,7 @@ getCollision=false
 #label_BP_TV=true # Make downsample image first in cemrgapp
 #apply_BP_TV_to_vtk=true # Make 1_seg/BiV_masked.vtk
 #getTVring=true
-#getRVwall=true
+getRVwall=true
 
 #######
 # Manual segmentation 
@@ -27,7 +27,7 @@ getCollision=false
 #make_cone=true
 #flip_mesh=true
 #motion_tracking=true
-getCollision=true
+#getCollision=true
 #############################
 # To detach and run remotely use: 
 # setsid ./run_RV_sim.sh > run_RV_sim1-4.log 2>&1 & ## PID: 297129
@@ -63,7 +63,7 @@ transform_image=/home/alee9/Work/software/CemrgApp-Linux_v2.3-rc4/bin/MLib/trans
 #for casenum in 10 11 13 # 06 04 #02 01 # PID: 
 #for casenum in {06..09} # PID:287713 > run_RV_sim6-9.log
 #for casenum in 01 02 04 # PID: 284574 > run_RV_sim1-4.log #13 11 10 09 08 07 06 04 02 01 # 
-for casenum in 04
+for casenum in 01
 do 
     segPath=${MSHF_path}/data/$casenum/1_seg/
 #    segPath=/data5/alee9/MS_HF_cohort/$casenum/RV/
@@ -152,20 +152,24 @@ do
         ${meshtool} resample surfmesh -msh=${segPath}/TV -ifmt=vtk -ofmt=vtk_polydata -outmsh=${segPath}/TV -avrg=2 
         
     fi 
+    meshsize=5
+
     if $getRVwall; then 
         ${meshtool} extract surface -msh=${segPath}/BiV_masked -ifmt=vtk -op=40 -surf=${segPath}/RV_wall -ofmt=vtk_polydata # carp_txt for vtx file, vtk to visualise"
         ${meshtool} smooth mesh -msh=${segPath}/RV_wall.surfmesh -tags=40 -outmsh=${segPath}/RV_smooth -ifmt=vtk -ofmt=vtk_polydata -smth=0.7
         python ${python_path}/vtk_scar_map.py ${segPath}/LVwall_Dilated_by_1_3_3_3.nii ${segPath}/RV_smooth.vtk ${segPath}/RV_smooth.vtk 
-        
-        ${meshtool} resample surfmesh -msh=${segPath}/RV_smooth -outmsh=${segPath}/RV_dec -ifmt=vtk -ofmt=vtk_polydata -avrg=2
+        ${meshtool} resample surfmesh -msh=${segPath}/RV_smooth -outmsh=${segPath}/RV_dec -ifmt=vtk -ofmt=vtk_polydata -avrg=${meshsize} 
+
+        # ${meshtool} resample surfmesh -msh=${segPath}/RV_smooth -outmsh=${segPath}/RV_dec -ifmt=vtk -ofmt=vtk_polydata -avrg=2
         #rm ${segPath}/RV_wall*  #${segPath}/RV_smooth* 
         # Remove the small elements 
-        python ${python_path}/remove_small_cells.py -msh ${segPath}/RV_dec.vtk -cell_area_min 0.2 -outmsh ${segPath}/RV_dec_filtered.vtk
+        
+        python ${python_path}/remove_small_cells.py -msh ${segPath}/RV_dec.vtk -cell_area_min 0.2 -outmsh ${segPath}/RV_dec_filtered${meshsize}.vtk
         # Separate the RV wall and septum
-        python ${python_path}/vtk_scar_map.py ${segPath}/LVwall_Dilated_by_1_3_3_3.nii ${segPath}/RV_dec_filtered.vtk ${segPath}/RV_dec_filtered.vtk 
+        python ${python_path}/vtk_scar_map.py ${segPath}/LVwall_Dilated_by_1_3_3_3.nii ${segPath}/RV_dec_filtered${meshsize}.vtk ${segPath}/RV_dec_filtered${meshsize}.vtk 
 
     fi
-    python ${python_path}/vtk_scar_map.py ${segPath}/LVwall_Dilated_by_1_3_3_3.nii ${segPath}/RV_dec_filtered.vtk ${segPath}/RV_dec_filtered.vtk 
+    
     INDEX_FILE="${MSHF_path}/data/cone_indices_on_PMvtp.csv"
     if [ "$make_cone" = true ]; then 
         # Find the matching line in the CSV
@@ -210,7 +214,7 @@ do
         python ${python_path}/append_vtk_polydata.py ${segPath}/TV.vtk ${segPath}/BiV_masked_PM.vtk ${segPath}/BiV_masked_PM.vtk --elemTagValue 2
         echo "Flip the mesh to use in motion tracking" 
         python ${python_path}/flip_mesh.py ${segPath}/BiV_masked_PM.vtk ${MSHF_path}/data/${casenum}/2_motion/BiV_masked_PM_flip.vtk
-        python ${python_path}/flip_mesh.py ${segPath}/RV_dec_filtered.vtk ${MSHF_path}/data/${casenum}/2_motion/RV_dec_flip.vtk
+        python ${python_path}/flip_mesh.py ${segPath}/RV_dec_filtered${meshsize}.vtk ${MSHF_path}/data/${casenum}/2_motion/RV_dec_flip.vtk
         python ${python_path}/flip_mesh.py ${segPath}/RV_smooth.vtk ${MSHF_path}/data/${casenum}/2_motion/RV_smooth_flip.vtk
         python ${python_path}/flip_mesh.py ${segPath}/PM/PM_dec.vtk ${MSHF_path}/data/${casenum}/2_motion/PM_flip.vtk
 
@@ -227,7 +231,7 @@ do
     #ls 
     if $motion_tracking; then 
         # python ${python_path}/flip_mesh.py ${segPath}/BiV_masked_PM.vtk ${MSHF_path}/data/${casenum}/2_motion/BiV_masked_flip.vtk
-        python ${python_path}/flip_mesh.py ${segPath}/RV_dec_filtered.vtk ${MSHF_path}/data/${casenum}/2_motion/RV_dec_flip.vtk
+        python ${python_path}/flip_mesh.py ${segPath}/RV_dec_filtered${meshsize}.vtk ${MSHF_path}/data/${casenum}/2_motion/RV_dec_flip.vtk
         # python ${python_path}/flip_mesh.py ${segPath}/RV_smooth.vtk ${MSHF_path}/data/${casenum}/2_motion/RV_smooth_flip.vtk
         # python ${python_path}/flip_mesh.py ${segPath}/PM/PM_dec.vtk ${MSHF_path}/data/${casenum}/2_motion/PM_flip.vtk
         # python ${python_path}/flip_mesh.py ${segPath}/PM/TV_cone.vtp ${MSHF_path}/data/${casenum}/2_motion/TV_flip.vtk
@@ -340,7 +344,7 @@ do
     fi
     echo "Finished running ${MSHF_path}/code/run_RV_sim.sh for MS_HF_cohort data ${casenum}"
 done
-# To process the results we can use the AHA_mapping.ipynb notebook
+## To process the results we can use the AHA_mapping.ipynb notebook
 # AHA_mapping.ipynb 
 
 # To get the tables we can use the Process_AHA_csv_to_tables.ipynb notebook
