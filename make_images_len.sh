@@ -56,10 +56,10 @@ if $Fig2; then
 			 TV_Collision/sum_plots/${pngfile} \
 			 PM_Collision/sum_plots/${pngfile} \
 			 $outfile2 \
-			 +smush -50 \) -resize 50% /data_fast/Work/MS_HF_cohort/images/fig2.png
+			 +smush -50 \) -resize 50% /data_fast/Work/MS_HF_cohort/images/figures/fig2.png
 	done
 	rm temp*.png
-	echo "/data_fast/Work/MS_HF_cohort/images/fig2.png"
+	echo "/data_fast/Work/MS_HF_cohort/images/figures/fig2.png"
 
 fi 
 
@@ -74,11 +74,33 @@ if $Fig3; then
 		images+=(${imgdir}/${coll}_Collision_by_AHA_region.png)
 	done
 	#echo "${images[1]}"
-	convert -append ${images[0]} ${images[1]} ${images[2]} ${images[3]} /data_fast/Work/MS_HF_cohort/images/fig3.png
-	echo "/data_fast/Work/MS_HF_cohort/images/fig3.png"
-	eog /data_fast/Work/MS_HF_cohort/images/fig3.png
+	convert -append ${images[0]} ${images[1]} ${images[2]} ${images[3]} /data_fast/Work/MS_HF_cohort/images/figures/fig3.png
+	echo "/data_fast/Work/MS_HF_cohort/images/figures/fig3.png"
+	eog /data_fast/Work/MS_HF_cohort/images/figures/fig3.png
 fi
+#####################################################################
+SupplememntFig=true
+if $SupplementFig; then 
+	images=()
+	imgdir=/data_fast/Work/MS_HF_cohort/images_cone10/plots/
+	#/data_fast/Work/MS_HF_cohort/images/plots/PM_Collision_by_AHA_region.png
+	for coll in "RV" "TV" "PM" "Combined"
+	do 
+		images+=(${imgdir}/${coll}_Collision_Cone_by_AHA_region.png)
+	done
+	#echo "${images[1]}"
+	convert -append ${images[0]} ${images[1]} ${images[2]} ${images[3]} /data_fast/Work/MS_HF_cohort/images/figures/SupplementFig.png
+	
+	legend=/data_fast/Work/MS_HF_cohort/images/plots/device_legend_only.png
+	out=/data_fast/Work/MS_HF_cohort/images/figures/SupplementFig_with_legend.png
 
+	convert -append \
+		/data_fast/Work/MS_HF_cohort/images/figures/SupplementFig.png \
+		/data_fast/Work/MS_HF_cohort/images/plots/device_legend_only.png \
+		/data_fast/Work/MS_HF_cohort/images/figures/SupplementFig_with_legend.png
+	eog /data_fast/Work/MS_HF_cohort/images/figures/SupplementFig_with_legend.png
+	cp /data_fast/Work/MS_HF_cohort/images/figures/SupplementFig_with_legend.png /home/alee9/Desktop/
+fi
 ######################################################################
 # Combine all lengths # CSP Fig 4
 Fig4=false # Length AHA wedge maps - dont use this! 
@@ -152,7 +174,7 @@ if $Fig4; then
 fi
 #####################################################################
 
-Fig4_2rows=true
+Fig4_2rows=false
 if $Fig4_2rows; then  # USE THIS
     shift=250
 
