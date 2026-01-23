@@ -16,7 +16,7 @@ getCollision=false
 #label_BP_TV=true # Make downsample image first in cemrgapp
 #apply_BP_TV_to_vtk=true # Make 1_seg/BiV_masked.vtk
 #getTVring=true
-getRVwall=true
+#getRVwall=true
 
 #######
 # Manual segmentation 
@@ -26,7 +26,7 @@ getRVwall=true
 #############################
 #make_cone=true
 #flip_mesh=true
-#motion_tracking=true
+motion_tracking=true
 #getCollision=true
 #############################
 # To detach and run remotely use: 
@@ -244,6 +244,7 @@ do
         RVsmthinit_mesh=${MSHF_path}/data/${casenum}/2_motion/RV_smooth_flip.vtk
         PMinit_mesh=${MSHF_path}/data/${casenum}/2_motion/PM_flip.vtk
         TVinit_mesh=${MSHF_path}/data/${casenum}/2_motion/TV_flip.vtk
+        RVseptum=${MSHF_path}/data/${casenum}/1_seg/RV_septum_polar.vtk
         tsffd=${trackingPath}/tsffd.dof
         #for frame in 0 4    
         for (( frame = 0; frame<=10; frame++))
@@ -253,8 +254,10 @@ do
             # Whole mesh
             #${transform_points}  ${init_mesh} ${trackingPath}/tracked/transformed-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3 
             # RV wall 
-            ${transform_points}  ${RVinit_mesh} ${trackingPath}/tracked/RV_dec-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3 
+            #${transform_points}  ${RVinit_mesh} ${trackingPath}/tracked/RV_dec-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3 
             #${transform_points}  ${RVsmthinit_mesh} ${trackingPath}/tracked/RV_smth-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3 
+            # RV septum
+            ${transform_points}  ${RVseptum} ${trackingPath}/tracked/RV_septum-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3 
             # PM
             #${transform_points}  ${PMinit_mesh} ${trackingPath}/tracked/PM-${frame}.vtk -dofin ${tsffd} -ascii -St ${frame10} -Tt ${startTime} -verbose 3 
             # TV 

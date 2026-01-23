@@ -12,7 +12,7 @@ target_tags = [4]  # The elemTags you're interested in
 
 # Load meshes
 #mesh1 = pv.read("mesh1_with_normals.vtp")
-mesh2 = pv.read(path+"2_motion/transformed-0.vtk") # Is the transformed data
+mesh2 = pv.read(path+"2_motion/tracked/transformed-0.vtk") # Is the transformed data
 # Step 1: Filter mesh2 based on elemTags
 if "elemTag" not in mesh2.cell_data:
     raise ValueError("mesh2 does not contain 'elemTag' in cell_data")
