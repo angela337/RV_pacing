@@ -231,7 +231,7 @@ do
     #ls 
     if $motion_tracking; then 
         # python ${python_path}/flip_mesh.py ${segPath}/BiV_masked_PM.vtk ${MSHF_path}/data/${casenum}/2_motion/BiV_masked_flip.vtk
-        python ${python_path}/flip_mesh.py ${segPath}/RV_dec_filtered${meshsize}.vtk ${MSHF_path}/data/${casenum}/2_motion/RV_dec_flip.vtk
+        #python ${python_path}/flip_mesh.py ${segPath}/RV_dec_filtered${meshsize}.vtk ${MSHF_path}/data/${casenum}/2_motion/RV_dec_flip.vtk
         # python ${python_path}/flip_mesh.py ${segPath}/RV_smooth.vtk ${MSHF_path}/data/${casenum}/2_motion/RV_smooth_flip.vtk
         # python ${python_path}/flip_mesh.py ${segPath}/PM/PM_dec.vtk ${MSHF_path}/data/${casenum}/2_motion/PM_flip.vtk
         # python ${python_path}/flip_mesh.py ${segPath}/PM/TV_cone.vtp ${MSHF_path}/data/${casenum}/2_motion/TV_flip.vtk
@@ -245,6 +245,7 @@ do
         PMinit_mesh=${MSHF_path}/data/${casenum}/2_motion/PM_flip.vtk
         TVinit_mesh=${MSHF_path}/data/${casenum}/2_motion/TV_flip.vtk
         RVseptum=${MSHF_path}/data/${casenum}/1_seg/RV_septum_polar.vtk
+        python 
         tsffd=${trackingPath}/tsffd.dof
         #for frame in 0 4    
         for (( frame = 0; frame<=10; frame++))

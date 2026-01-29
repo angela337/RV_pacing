@@ -10,7 +10,7 @@ fi
 
 Fig2=false
 #######################################################################
-if $Fig2; then 
+if $Fig2; then  # AHA Probability maps 
 # Figure 2: Summary plots for initial device dimensions
 	for device in "AveirAR" # "AveirAR" "AveirVR"
 	do 
