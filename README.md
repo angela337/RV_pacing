@@ -192,6 +192,15 @@ The final reported "Mean % of collisions" per AHA region is the **spatial averag
 | Per grid cell, across patients | Count: how many patients had a collision at this location |
 | Per AHA region | Mean/std of that count (as %) across all grid cells in the region |
 
+## Citation
+
+If you use this code in your work, please cite:
+
+Angela W.C. Lee, Marina Strocchi, Alphonsus Liew, Sandra Howell, Felicity De Vere, Nadeev Wijesuriya, Ronak Rajani, Christopher Aldo Rinaldi, Steven Niederer,
+"Computational Analysis of Intracardiac Collision Risk and Optimal Site for Right Ventricular Leadless Left Bundle Branch Area Pacing: A Simulation Study",
+*Heart Rhythm O2*, 2026, ISSN 2666-5018,
+https://doi.org/10.1016/j.hroo.2026.02.030
+
 ## Typical Workflow
 
 1. **Prepare data**: Place DICOM and segmentation masks in appropriate directories
