@@ -96,6 +96,12 @@ Main orchestration script that controls the entire workflow. Uses flags to enabl
 
 ### Validation
 
+**RV_SNR.ipynb**
+- Computes image quality metrics (SNR and CNR) for cardiac NIfTI images
+- SNR = mean(RV blood pool) / std(RV blood pool)
+- CNR = |mean(RV) - mean(Myocardium)| / std(background)
+- Iterates over all cases and reports per-case metrics
+
 **check_convergence.ipynb**
 - Validates simulation convergence
 - Data quality checks
