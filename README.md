@@ -116,9 +116,7 @@ Main orchestration script that controls the entire workflow. Uses flags to enabl
 ## Utility Scripts
 
 ### File Management
-- **move_files.sh** - Moves/copies data files between directories
 - **copy_files_from_392.sh** - Copies DICOM files from remote server
-- **unzip.sh** - Unzips archived data files
 - **check_nii_file.sh** - Validates NIfTI file integrity
 
 ### Visualization
@@ -127,14 +125,6 @@ Main orchestration script that controls the entire workflow. Uses flags to enabl
 ## Data Directories
 
 ```
-Motion_data/
-├── input_vtk/          # Input VTK meshes (RV, LV surfaces) at each time frame (0-10)
-├── Structures/         # Transform scripts for motion tracking
-├── output_cylinders/   # Generated device cylinder meshes
-├── GMSH/               # GMSH mesh data
-├── videos/             # Animation outputs
-└── figures/            # Generated figures
-
 plots/                  # Output PNG images of collision analysis results
 ```
 
