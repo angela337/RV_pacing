@@ -122,11 +122,6 @@ Main orchestration script that controls the entire workflow. Uses flags to enabl
 ### Visualization
 - **make_images_len.sh** - Creates screenshot images of mesh visualizations
 
-## Data Directories
-
-```
-plots/                  # Output PNG images of collision analysis results
-```
 
 ## Devices Analyzed
 
@@ -139,7 +134,7 @@ plots/                  # Output PNG images of collision analysis results
 ## Dependencies
 
 - Python: numpy, vtk, pyvista, nibabel, SimpleITK, scipy, pandas, matplotlib
-- GMSH for mesh generation
+- GMSH for mesh generation of device cylinders 
 - Bash for pipeline orchestration
 
 ## Collision Percentage Calculation
