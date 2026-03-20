@@ -25,8 +25,8 @@ getCollision=false
 # Check vertex for attachment points to chrodae in PM.vtp for Ant, Inf and Sept PM
 #############################
 #make_cone=true
-#flip_mesh=true
-motion_tracking=true
+flip_mesh=true
+#motion_tracking=true
 #getCollision=true
 #############################
 # To detach and run remotely use: 
@@ -59,11 +59,11 @@ transform_image=/home/alee9/Work/software/CemrgApp-Linux_v2.3-rc4/bin/MLib/trans
 #meshtool=/home/carp_2024/CARPentry_ICL_latest/meshtool/meshtool
 #transform_points=/data5/alee9/software/CemrgApp-Linux_v2.3-rc4/bin/MLib/transform-points
 
-#for casenum in 01 02 04 {06..11} 13 # 02 04 {05..11} 13 # No/bad data or fail at 3,5,12 01
+for casenum in 01 02 04 {06..11} 13 # 02 04 {05..11} 13 # No/bad data or fail at 3,5,12 01
 #for casenum in 10 11 13 # 06 04 #02 01 # PID: 
 #for casenum in {06..09} # PID:287713 > run_RV_sim6-9.log
 #for casenum in 01 02 04 # PID: 284574 > run_RV_sim1-4.log #13 11 10 09 08 07 06 04 02 01 # 
-for casenum in 01
+#for casenum in 01
 do 
     segPath=${MSHF_path}/data/$casenum/1_seg/
 #    segPath=/data5/alee9/MS_HF_cohort/$casenum/RV/
@@ -245,7 +245,7 @@ do
         PMinit_mesh=${MSHF_path}/data/${casenum}/2_motion/PM_flip.vtk
         TVinit_mesh=${MSHF_path}/data/${casenum}/2_motion/TV_flip.vtk
         RVseptum=${MSHF_path}/data/${casenum}/1_seg/RV_septum_polar.vtk
-        python 
+        
         tsffd=${trackingPath}/tsffd.dof
         #for frame in 0 4    
         for (( frame = 0; frame<=10; frame++))
